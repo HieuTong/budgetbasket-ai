@@ -1,0 +1,56 @@
+name,category,unit_price,unit,nutrition_tags
+Full Cream Milk 2L,dairy,3.50,each,calcium protein
+Home Brand Milk 2L,dairy,2.80,each,calcium protein
+Light Milk 2L,dairy,3.60,each,calcium protein low-fat
+Free Range Eggs 12pk,dairy,7.50,each,protein
+Cage Eggs 12pk,dairy,5.20,each,protein
+Cheddar Cheese Block 500g,dairy,7.00,each,calcium protein
+Greek Yoghurt 1kg,dairy,6.50,each,protein calcium
+White Bread Loaf,bakery,3.20,each,carbs
+Wholemeal Bread Loaf,bakery,3.60,each,carbs fibre
+Home Brand White Bread,bakery,2.10,each,carbs
+Sourdough Loaf,bakery,5.50,each,carbs
+Chicken Breast 1kg,meat,10.00,kg,protein
+Chicken Thigh 1kg,meat,8.00,kg,protein
+Beef Mince 500g,meat,7.50,each,protein
+Lamb Chops 500g,meat,9.00,each,protein
+Pork Sausages 500g,meat,6.00,each,protein
+Salmon Fillet 300g,meat,11.00,each,protein omega-3
+Canned Tuna 425g,pantry,3.50,each,protein
+Canned Chickpeas 400g,pantry,1.30,each,protein fibre
+Canned Lentils 400g,pantry,1.30,each,protein fibre
+Home Brand Pasta 500g,pantry,1.20,each,carbs
+Name Brand Pasta 500g,pantry,2.80,each,carbs
+Pasta Sauce Jar 500g,pantry,2.50,each,
+Home Brand Pasta Sauce 500g,pantry,1.50,each,
+White Rice 1kg,pantry,2.80,each,carbs
+Brown Rice 1kg,pantry,3.50,each,carbs fibre
+Rolled Oats 750g,pantry,3.20,each,fibre carbs
+Peanut Butter 375g,pantry,4.00,each,protein
+Olive Oil 500ml,pantry,8.00,each,
+Canned Tomatoes 400g,pantry,1.40,each,
+Frozen Mixed Vegetables 1kg,frozen,3.50,each,fibre
+Frozen Peas 1kg,frozen,3.00,each,fibre protein
+Frozen Broccoli 500g,frozen,3.20,each,fibre
+Fresh Broccoli,produce,4.50,kg,fibre
+Fresh Carrots 1kg,produce,2.00,each,fibre
+Bananas,produce,3.50,kg,fibre potassium
+Apples,produce,5.00,kg,fibre
+Navel Oranges,produce,4.00,kg,fibre vitamin-c
+Potatoes 2kg,produce,4.00,each,carbs fibre
+Onions 1kg,produce,2.50,each,fibre
+Tomatoes,produce,6.00,kg,vitamin-c
+Baby Spinach 120g,produce,3.50,each,fibre iron
+Capsicum,produce,7.00,kg,vitamin-c
+Cucumber,produce,1.80,each,
+Avocado,produce,2.50,each,fibre healthy-fat
+Orange Juice 2L,beverages,4.50,each,vitamin-c
+Instant Coffee 200g,beverages,9.00,each,
+Tea Bags 100pk,beverages,4.50,each,
+Bottled Water 24pk,beverages,7.00,each,
+Butter 500g,dairy,6.50,each,
+Margarine 500g,dairy,3.50,each,
+Sliced Ham 200g,meat,5.50,each,protein
+Toilet Paper 12pk,household,9.00,each,
+Dish Soap 500ml,household,3.00,each,
+Laundry Detergent 2L,household,12.00,each,

@@ -1,0 +1,25 @@
+# Render Blueprint -- same deployment shape as ticket_ml_system
+# (Docker on Render, custom domain), plus a database since this project
+# needs Postgres and ticket_ml_system didn't.
+#
+# Connect this repo in the Render dashboard: "New +" -> "Blueprint" ->
+# select repo -- Render reads this file automatically.
+services:
+  - type: web
+    name: budgetbasket-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false   # paste your Supabase connection string -- see DEPLOYMENT.md
+      - key: OPENAI_API_KEY
+        sync: false   # set manually in the Render dashboard -- never commit secrets
+      - key: CORS_ORIGINS
+        value: "https://YOUR_DOMAIN.me,https://www.YOUR_DOMAIN.me"
+
+# No `databases:` block -- Render's own free Postgres expires 30 days
+# after creation. Using Supabase's permanent free tier instead. See
+# DEPLOYMENT.md for the reasoning.

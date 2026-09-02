@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-paper text-ink;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent,
+      transparent 27px,
+      rgba(31, 42, 34, 0.035) 28px
+    );
+  }
+}
+
+@layer components {
+  /* Dotted leader between an item name and its price, receipt/menu style */
+  .leader {
+    @apply flex items-baseline gap-2;
+  }
+  .leader .fill {
+    @apply flex-1 border-b border-dotted border-line translate-y-[-4px];
+  }
+
+  /* Torn-paper top/bottom edge for the receipt card */
+  .torn-top {
+    clip-path: polygon(
+      0% 6px, 3% 0, 6% 6px, 9% 0, 12% 6px, 15% 0, 18% 6px, 21% 0, 24% 6px, 27% 0,
+      30% 6px, 33% 0, 36% 6px, 39% 0, 42% 6px, 45% 0, 48% 6px, 51% 0, 54% 6px, 57% 0,
+      60% 6px, 63% 0, 66% 6px, 69% 0, 72% 6px, 75% 0, 78% 6px, 81% 0, 84% 6px, 87% 0,
+      90% 6px, 93% 0, 96% 6px, 99% 0, 100% 6px,
+      100% 100%, 0% 100%
+    );
+  }
+}
