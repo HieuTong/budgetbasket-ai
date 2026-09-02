@@ -18,7 +18,7 @@ services:
       - key: OPENAI_API_KEY
         sync: false   # set manually in the Render dashboard -- never commit secrets
       - key: CORS_ORIGINS
-        value: "https://YOUR_DOMAIN.me,https://www.YOUR_DOMAIN.me"
+        value: "https://budgetbasket.tech,https://www.budgetbasket.tech"
 
 # No `databases:` block -- Render's own free Postgres expires 30 days
 # after creation. Using Supabase's permanent free tier instead. See

@@ -26,7 +26,7 @@ gh repo create budgetbasket-ai --public --source=. --push
 
 1. https://education.github.com/pack → Namecheap → redeem the free `.me`
    domain offer.
-2. Register something like `budgetbasket.me`.
+2. Register something like `budgetbasket.tech`.
 
 ## 3. Set up the database (Supabase — permanent free tier)
 
@@ -48,7 +48,7 @@ gh repo create budgetbasket-ai --public --source=. --push
 4. Deploy. You'll get a URL like `budgetbasket-backend.onrender.com`.
    Confirm `/health` returns `{"status": "ok"}` (allow for cold start on
    first hit).
-5. **Settings → Custom Domains** → add `api.budgetbasket.me`, follow
+5. **Settings → Custom Domains** → add `api.budgetbasket.tech`, follow
    Render's CNAME instructions — free on Render's plan, no upcharge.
 
 ## 5. Load data into Supabase
@@ -65,22 +65,22 @@ to route through Render for a one-time seed.
 
 1. https://vercel.com → **New Project** → import the repo → root
    directory `frontend`.
-2. Env var: `NEXT_PUBLIC_API_BASE` = `https://api.budgetbasket.me`.
-3. Deploy → **Settings → Domains** → add `budgetbasket.me` and
-   `www.budgetbasket.me`.
+2. Env var: `NEXT_PUBLIC_API_BASE` = `https://api.budgetbasket.tech`.
+3. Deploy → **Settings → Domains** → add `budgetbasket.tech` and
+   `www.budgetbasket.tech`.
 
 ## 7. Point the domain's DNS (Namecheap → Advanced DNS)
 
-| Type | Host | Value |
-|---|---|---|
-| A Record | `@` | Vercel's IP (from Vercel's domain setup) |
-| CNAME | `www` | `cname.vercel-dns.com` |
-| CNAME | `api` | the Render hostname (from Render's domain setup) |
+| Type     | Host  | Value                                            |
+| -------- | ----- | ------------------------------------------------ |
+| A Record | `@`   | Vercel's IP (from Vercel's domain setup)         |
+| CNAME    | `www` | `cname.vercel-dns.com`                           |
+| CNAME    | `api` | the Render hostname (from Render's domain setup) |
 
 ## 8. Verify end-to-end
 
-- `https://budgetbasket.me` loads the UI
-- `https://api.budgetbasket.me/health` returns `{"status": "ok"}`
+- `https://budgetbasket.tech` loads the UI
+- `https://api.budgetbasket.tech/health` returns `{"status": "ok"}`
   (first hit may be slow — cold start, same as `ticket_ml_system`)
 - The budget slider calls the backend and returns an optimized basket
 
