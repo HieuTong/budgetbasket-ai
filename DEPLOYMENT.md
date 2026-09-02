@@ -22,11 +22,10 @@ git commit -m "Initial scaffold"
 gh repo create budgetbasket-ai --public --source=. --push
 ```
 
-## 2. Claim the domain (Namecheap, via Student Pack)
+## 2. Domain
 
-1. https://education.github.com/pack → Namecheap → redeem the free `.me`
-   domain offer.
-2. Register something like `budgetbasket.tech`.
+Already registered: `budgetbasket.tech`, via the Student Pack's get.tech
+offer. Nothing to do here — DNS gets configured in step 7.
 
 ## 3. Set up the database (Supabase — permanent free tier)
 
@@ -38,13 +37,14 @@ gh repo create budgetbasket-ai --public --source=. --push
 
 ## 4. Deploy the backend (Render)
 
-1. In `render.yaml`, replace `YOUR_DOMAIN.me` with your real domain.
+1. `render.yaml` is already set to `budgetbasket.tech` — nothing to edit.
 2. https://render.com → **New + → Blueprint** → connect your GitHub repo.
    Render reads `render.yaml` automatically — same detection flow as
    `ticket_ml_system`'s Dockerfile.
 3. Fill in the two `sync: false` env vars when prompted:
    - `DATABASE_URL` → the Supabase connection string from step 3
-   - `OPENAI_API_KEY` → your key
+   - `GEMINI_API_KEY` → your key (from https://aistudio.google.com/apikey — no
+     billing required, free tier)
 4. Deploy. You'll get a URL like `budgetbasket-backend.onrender.com`.
    Confirm `/health` returns `{"status": "ok"}` (allow for cold start on
    first hit).
@@ -69,13 +69,14 @@ to route through Render for a one-time seed.
 3. Deploy → **Settings → Domains** → add `budgetbasket.tech` and
    `www.budgetbasket.tech`.
 
-## 7. Point the domain's DNS (Namecheap → Advanced DNS)
+## 7. Point the domain's DNS (get.tech's DNS panel, not Namecheap —
+## budgetbasket.tech was registered there)
 
-| Type     | Host  | Value                                            |
-| -------- | ----- | ------------------------------------------------ |
-| A Record | `@`   | Vercel's IP (from Vercel's domain setup)         |
-| CNAME    | `www` | `cname.vercel-dns.com`                           |
-| CNAME    | `api` | the Render hostname (from Render's domain setup) |
+| Type | Host | Value |
+|---|---|---|
+| A Record | `@` | Vercel's IP (from Vercel's domain setup) |
+| CNAME | `www` | `cname.vercel-dns.com` |
+| CNAME | `api` | the Render hostname (from Render's domain setup) |
 
 ## 8. Verify end-to-end
 

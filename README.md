@@ -37,6 +37,17 @@ they're actually the right tool — not used everywhere for effect.
                                              └────────────────────┘
 ```
 
+## Why Gemini, not OpenAI
+
+Google's Gemini API has a genuine free tier (1,500 requests/day on Flash,
+no billing method required) as of 2026 — OpenAI's API doesn't reliably
+offer one anymore (small trial credits, if issued at all, expire in 3
+months and typically still require adding a card). Function calling is
+done manually here (JSON-schema tool declarations, parsed
+`function_call` parts) rather than via the SDK's automatic
+function-calling feature, to keep the agent's control flow explicit —
+see the docstring in `app/agent/agent.py`.
+
 ## Why an LP solver, not just an LLM
 
 The budget-fitting problem is a textbook **0/1 knapsack / integer program**: maximize a
@@ -53,7 +64,7 @@ math itself.
 | Similarity / substitutes | TF-IDF + cosine similarity | `app/ml/similarity.py` |
 | Price trend | Linear regression on price history | `app/ml/forecasting.py` |
 | Budget optimization | Integer linear programming (PuLP) | `app/ml/optimizer.py` |
-| RAG | FAISS + OpenAI embeddings, keyword fallback | `app/rag/retriever.py` |
+| RAG | FAISS + Gemini embeddings, keyword fallback | `app/rag/retriever.py` |
 | Agent | Hand-rolled tool-calling loop | `app/agent/agent.py` |
 
 ## Data
@@ -92,7 +103,7 @@ would fix this; noted in the roadmap below.
 
 ```bash
 cd backend
-cp .env.example .env   # fill in DATABASE_URL and OPENAI_API_KEY
+cp .env.example .env   # fill in DATABASE_URL and GEMINI_API_KEY
 pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```

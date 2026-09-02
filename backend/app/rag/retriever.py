@@ -2,6 +2,10 @@
 FAISS-backed retriever with a keyword-overlap fallback so the whole
 pipeline still works (and is demoable) without an API key -- worth
 mentioning in an interview as a resilience/cost-control decision.
+
+Uses Gemini's embedding model (free tier: generous daily request quota,
+no billing required) rather than OpenAI's, which has no reliable free
+tier as of 2026.
 """
 import re
 
@@ -12,7 +16,7 @@ from app.rag.knowledge_base import KNOWLEDGE_BASE
 
 try:
     import faiss
-    from openai import OpenAI
+    from google import genai
 
     _HAS_FAISS = True
 except ImportError:
@@ -25,13 +29,13 @@ class Retriever:
         self._index = None
         self._client = None
 
-        if _HAS_FAISS and settings.OPENAI_API_KEY:
-            self._client = OpenAI(api_key=settings.OPENAI_API_KEY)
+        if _HAS_FAISS and settings.GEMINI_API_KEY:
+            self._client = genai.Client(api_key=settings.GEMINI_API_KEY)
             self._build_index()
 
     def _embed(self, texts: list[str]) -> np.ndarray:
-        resp = self._client.embeddings.create(model=settings.EMBEDDING_MODEL, input=texts)
-        return np.array([d.embedding for d in resp.data], dtype="float32")
+        resp = self._client.models.embed_content(model=settings.EMBEDDING_MODEL, contents=texts)
+        return np.array([e.values for e in resp.embeddings], dtype="float32")
 
     def _build_index(self):
         vectors = self._embed([d["text"] for d in self.docs])
