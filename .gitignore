@@ -7,4 +7,4 @@ node_modules/
 .next/
 data/
 *.egg-info/
-DEPLOYMENT.md
+./DEPLOYMENT.md
