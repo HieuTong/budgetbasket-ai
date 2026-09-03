@@ -1,6 +1,5 @@
-# Render Blueprint -- same deployment shape as ticket_ml_system
-# (Docker on Render, custom domain), plus a database since this project
-# needs Postgres and ticket_ml_system didn't.
+# Render Blueprint -- Docker on Render, custom domain, plus a database
+# since this project needs Postgres.
 #
 # Connect this repo in the Render dashboard: "New +" -> "Blueprint" ->
 # select repo -- Render reads this file automatically.

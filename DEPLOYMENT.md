@@ -1,16 +1,11 @@
 # Deploying BudgetBasket to a real domain
 
-Same deployment shape as `ticket_ml_system` (Docker on Render, custom
-domain, e.g. `api.ticketml.hieutong.dev`) — reused here because it's a
-proven approach you've already run successfully once. One real
-difference: `ticket_ml_system` has no database (just `.pkl`/`.csv`
-artifacts), and this project needs Postgres for purchase and price
-history, so Supabase's free tier is added for that piece.
+Backend on Render (Docker, free tier, git-connected auto-deploy),
+database on Supabase (permanent free Postgres), frontend on Vercel.
 
 **Cost: $0/month** on this setup. See the cost breakdown in chat for the
 full table — the only non-monetary cost is Render's free-tier cold start
-(30-50s after 15 min idle), which you already know about from
-`ticket_ml_system`.
+(30-50s after 15 min idle).
 
 ## 1. Push this repo to GitHub
 
@@ -39,8 +34,7 @@ offer. Nothing to do here — DNS gets configured in step 7.
 
 1. `render.yaml` is already set to `budgetbasket.tech` — nothing to edit.
 2. https://render.com → **New + → Blueprint** → connect your GitHub repo.
-   Render reads `render.yaml` automatically — same detection flow as
-   `ticket_ml_system`'s Dockerfile.
+   Render reads `render.yaml` automatically.
 3. Fill in the two `sync: false` env vars when prompted:
    - `DATABASE_URL` → the Supabase connection string from step 3
    - `GEMINI_API_KEY` → your key (from https://aistudio.google.com/apikey — no
@@ -82,20 +76,18 @@ to route through Render for a one-time seed.
 
 - `https://budgetbasket.tech` loads the UI
 - `https://api.budgetbasket.tech/health` returns `{"status": "ok"}`
-  (first hit may be slow — cold start, same as `ticket_ml_system`)
+  (first hit may be slow — cold start)
 - The budget slider calls the backend and returns an optimized basket
 
 ## Ongoing: CI vs CD
 
 `.github/workflows/ci.yml` runs build/import checks on every push (CI).
 Actual deployment is handled by Render's and Vercel's own git
-integration — both auto-deploy on push to `main` once connected, same
-pattern as `ticket_ml_system`'s Render setup. No custom Actions deploy
-step needed.
+integration — both auto-deploy on push to `main` once connected. No
+custom Actions deploy step needed.
 
 ## If cold starts become a real problem
 
 Render Starter ($7/mo) removes them. Worth it only during weeks you're
 actively interviewing and expect people to click the live link cold —
-otherwise the free tier is fine, and you can point to having navigated
-this exact trade-off before as a talking point.
+otherwise the free tier is fine.

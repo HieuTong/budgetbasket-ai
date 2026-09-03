@@ -113,10 +113,8 @@ Visit `http://localhost:8000/docs` for the interactive API.
 ## Deployment
 
 - **Backend**: containerized (`backend/Dockerfile`) — deployed to Render
-  (free tier, git-connected auto-deploy), same approach as Hieu's prior
-  `ticket_ml_system` project. See `DEPLOYMENT.md` for the full walkthrough.
-- **Database**: Supabase — permanent free Postgres tier (needed here since,
-  unlike `ticket_ml_system`, this project requires real purchase/price data).
+  (free tier, git-connected auto-deploy). See `DEPLOYMENT.md` for the full walkthrough.
+- **Database**: Supabase — permanent free Postgres tier.
 - **Frontend**: Next.js on Vercel.
 - **CI**: GitHub Actions (`.github/workflows/ci.yml`) runs an import sanity check and
   Docker build on every push.
