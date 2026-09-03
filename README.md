@@ -127,5 +127,3 @@ Visit `http://localhost:8000/docs` for the interactive API.
 - Wire `open_prices_client.py` into a scheduled job once deployed, to gradually replace synthetic history with real contributed AU price data
 - Wire real purchase history from Postgres into the optimizer's utility scoring
 - Add pytest coverage for the optimizer and retriever
-
-DATABASE_URL=postgresql://postgres.cjqmcgyyzechkyygjhzu:reallyPassword12345@@!!@aws-0-ap-northeast-1.pooler.supabase.com:6543/postgres python -m seed.load_seed_data
