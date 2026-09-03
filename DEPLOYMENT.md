@@ -64,13 +64,14 @@ to route through Render for a one-time seed.
    `www.budgetbasket.tech`.
 
 ## 7. Point the domain's DNS (get.tech's DNS panel, not Namecheap —
+
 ## budgetbasket.tech was registered there)
 
-| Type | Host | Value |
-|---|---|---|
-| A Record | `@` | Vercel's IP (from Vercel's domain setup) |
-| CNAME | `www` | `cname.vercel-dns.com` |
-| CNAME | `api` | the Render hostname (from Render's domain setup) |
+| Type     | Host  | Value                                            |
+| -------- | ----- | ------------------------------------------------ |
+| A Record | `@`   | Vercel's IP (from Vercel's domain setup)         |
+| CNAME    | `www` | `cname.vercel-dns.com`                           |
+| CNAME    | `api` | the Render hostname (from Render's domain setup) |
 
 ## 8. Verify end-to-end
 

@@ -54,18 +54,18 @@ The budget-fitting problem is a textbook **0/1 knapsack / integer program**: max
 utility score subject to a budget constraint. Solving it with PuLP (CBC solver) guarantees
 an optimal, budget-respecting basket every time — an LLM asked to do this arithmetic
 directly will happily produce a basket that's over budget or leaves money needlessly
-unspent. The agent layer *calls* this solver as a tool rather than re-implementing the
+unspent. The agent layer _calls_ this solver as a tool rather than re-implementing the
 math itself.
 
 ## Components
 
-| Layer | Technique | File |
-|---|---|---|
-| Similarity / substitutes | TF-IDF + cosine similarity | `app/ml/similarity.py` |
-| Price trend | Linear regression on price history | `app/ml/forecasting.py` |
-| Budget optimization | Integer linear programming (PuLP) | `app/ml/optimizer.py` |
-| RAG | FAISS + Gemini embeddings, keyword fallback | `app/rag/retriever.py` |
-| Agent | Hand-rolled tool-calling loop | `app/agent/agent.py` |
+| Layer                    | Technique                                   | File                    |
+| ------------------------ | ------------------------------------------- | ----------------------- |
+| Similarity / substitutes | TF-IDF + cosine similarity                  | `app/ml/similarity.py`  |
+| Price trend              | Linear regression on price history          | `app/ml/forecasting.py` |
+| Budget optimization      | Integer linear programming (PuLP)           | `app/ml/optimizer.py`   |
+| RAG                      | FAISS + Gemini embeddings, keyword fallback | `app/rag/retriever.py`  |
+| Agent                    | Hand-rolled tool-calling loop               | `app/agent/agent.py`    |
 
 ## Data
 
@@ -87,6 +87,7 @@ Two data sources, used deliberately for different purposes:
   runnable immediately without external API access.
 
 Load the seed data:
+
 ```bash
 cd backend
 python -m seed.load_seed_data
@@ -126,3 +127,5 @@ Visit `http://localhost:8000/docs` for the interactive API.
 - Wire `open_prices_client.py` into a scheduled job once deployed, to gradually replace synthetic history with real contributed AU price data
 - Wire real purchase history from Postgres into the optimizer's utility scoring
 - Add pytest coverage for the optimizer and retriever
+
+DATABASE_URL=postgresql://postgres.cjqmcgyyzechkyygjhzu:reallyPassword12345@@!!@aws-0-ap-northeast-1.pooler.supabase.com:6543/postgres python -m seed.load_seed_data

@@ -19,6 +19,7 @@ from google.genai import types
 
 from app.agent.tools import TOOL_REGISTRY
 from app.core.config import settings
+from app.ml.optimizer import BasketItem
 
 SYSTEM_PROMPT = """You are BudgetBasket AI, a grocery budgeting assistant for Australian
 households. Given a user's budget and usual purchases, build a shopping basket that stays
@@ -104,9 +105,14 @@ class BudgetAgent:
 
     @staticmethod
     def _extra_args(fn_name: str, context: dict) -> dict:
-        """Inject non-LLM-visible args (e.g. full candidate list) the model shouldn't have to pass verbatim."""
         if fn_name == "run_budget_optimizer":
-            return {"candidates": context.get("candidates", [])}
+            candidates = [
+                item if isinstance(item, BasketItem) else BasketItem(**item)
+                for item in context.get("candidates", [])
+            ]
+            return {"candidates": candidates}
+
         if fn_name == "find_substitutes":
             return {"products": context.get("products", [])}
+
         return {}
