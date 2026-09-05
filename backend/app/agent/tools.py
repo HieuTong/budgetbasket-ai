@@ -30,10 +30,15 @@ def run_budget_optimizer_tool(candidates: list[BasketItem], budget: float) -> di
 
 
 def find_substitutes_tool(product_id: int, products: list[Product]) -> list[dict]:
-    """Find cheaper substitutes for a product, grounded in similarity, not guesswork."""
+    if not products:
+        return []
+
     index = SimilarityIndex(products)
     subs = index.cheaper_substitutes(product_id)
-    return [{"name": p.name, "price": p.unit_price, "similarity": round(sim, 2)} for p, sim in subs]
+    return [
+        {"name": p.name, "price": p.unit_price, "similarity": round(sim, 2)}
+        for p, sim in subs
+    ]
 
 
 def check_price_trend_tool(history: list[PricePoint]) -> dict:
