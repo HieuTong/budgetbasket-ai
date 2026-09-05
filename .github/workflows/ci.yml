@@ -21,9 +21,8 @@ jobs:
         run: pip install -r requirements.txt
       - name: Import sanity check
         run: python -c "from app.main import app; print('app imports OK')"
-      # Add pytest here once tests/ exists:
-      # - name: Run tests
-      #   run: pytest
+      - name: Run tests
+        run: pytest -q
 
   docker-build:
     runs-on: ubuntu-latest

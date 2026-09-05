@@ -30,9 +30,12 @@ class SimilarityIndex:
     def __init__(self, products: list[Product]):
         self.products = products
         self._vectorizer = TfidfVectorizer(stop_words="english")
-        self._matrix = self._vectorizer.fit_transform([p.text() for p in products])
+        self._matrix = self._vectorizer.fit_transform([p.text() for p in products]) if products else None
 
     def recommend_similar(self, product_id: int, top_k: int = 5) -> list[tuple[Product, float]]:
+        if not self.products or self._matrix is None:
+            return []
+
         idx = next(i for i, p in enumerate(self.products) if p.id == product_id)
         sims = cosine_similarity(self._matrix[idx], self._matrix).flatten()
         ranked = np.argsort(-sims)
@@ -48,6 +51,9 @@ class SimilarityIndex:
     def cheaper_substitutes(self, product_id: int, top_k: int = 3) -> list[tuple[Product, float]]:
         """Similar items, filtered to strictly cheaper ones, ranked by
         a blend of similarity and savings."""
+        if not self.products or self._matrix is None:
+            return []
+
         base = next(p for p in self.products if p.id == product_id)
         candidates = self.recommend_similar(product_id, top_k=20)
         cheaper = [(p, sim) for p, sim in candidates if p.unit_price < base.unit_price]
