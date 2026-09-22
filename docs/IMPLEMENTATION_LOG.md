@@ -3,7 +3,7 @@
 This file is the durable project memory for the BudgetBasket AI revamp. Do not rely on chat history for project state.
 
 ## Phase 0 — Baseline, Branching, and Engineering Record
-Status: In progress
+Status: Complete
 
 ### Completed
 - Created revamp/decisionos from main.
@@ -42,7 +42,7 @@ Status: In progress
 - Revamp branch created from main.
 
 ### Next
-Complete Phase 0 documentation commit, then begin Phase 1: data-driven catalog, purchase history, personalized utility, and optimizer integration.
+Phase 1 is in progress: complete CI verification and edge-case review, then begin Phase 2.
 
 ## Phase 1 — Data-Driven BudgetBasket
 Status: In progress
