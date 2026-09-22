@@ -1,7 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
 
-from app.seed.import_grocery_dataset import normalize_row
+from seed.import_grocery_dataset import normalize_row
 
 
 def test_normalize_grocery_row():
