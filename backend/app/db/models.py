@@ -13,11 +13,12 @@ class Product(Base):
     name = Column(String, nullable=False)
     category = Column(String, index=True)
     unit_price = Column(Float, nullable=False)
-    unit = Column(String, default="each")  # e.g. "L", "kg", "each"
-    nutrition_tags = Column(String, default="")  # comma-separated, simple for MVP
-    embedding_id = Column(Integer, nullable=True)  # FK into vector store metadata
+    unit = Column(String, default="each")
+    nutrition_tags = Column(String, default="")
+    embedding_id = Column(Integer, nullable=True)
 
     price_history = relationship("PriceHistory", back_populates="product")
+    purchases = relationship("Purchase", back_populates="product")
 
 
 class PriceHistory(Base):
@@ -39,3 +40,5 @@ class Purchase(Base):
     product_id = Column(Integer, ForeignKey("products.id"))
     quantity = Column(Float, default=1.0)
     purchased_at = Column(DateTime, default=datetime.utcnow)
+
+    product = relationship("Product", back_populates="purchases")
