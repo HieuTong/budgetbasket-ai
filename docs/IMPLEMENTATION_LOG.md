@@ -45,7 +45,59 @@ Status: In progress
 Complete Phase 0 documentation commit, then begin Phase 1: data-driven catalog, purchase history, personalized utility, and optimizer integration.
 
 ## Phase 1 — Data-Driven BudgetBasket
-Status: Not started
+Status: In progress
+
+### Completed so far
+- Added SQLAlchemy repository layers for products, purchases, and price history.
+- Added a deterministic personalized-utility service using purchase frequency, recency, quantity behavior, and category affinity.
+- Added a Product <-> Purchase ORM relationship.
+- Replaced the basket route's hardcoded five-product list with the database catalog and user purchase history.
+- Added candidate count and purchase-history count to the basket response for observability during the migration.
+- Expanded purchase API responses with product name, category, and current unit price.
+- Connected the purchase-history agent tool to the purchase repository.
+- Updated the chat route to build agent context from the real catalog and the user's purchase history.
+- Updated agent conversion logic so catalog dictionaries can be converted into the similarity Product type.
+- Added personalization unit tests.
+
+### Files added
+- backend/app/db/repositories/products.py
+- backend/app/db/repositories/purchases.py
+- backend/app/db/repositories/price_history.py
+- backend/app/db/repositories/__init__.py
+- backend/app/services/personalization.py
+- backend/app/services/__init__.py
+- backend/tests/test_personalization.py
+
+### Files changed
+- backend/app/db/models.py
+- backend/app/api/routes/basket.py
+- backend/app/api/routes/purchases.py
+- backend/app/api/routes/chat.py
+- backend/app/agent/agent.py
+- backend/app/agent/tools.py
+
+### Verification
+- Existing repository tests remain present.
+- New personalization tests were added.
+- GitHub Actions verification has not yet been run against the revamp branch because the existing workflow triggers on pushes to main or pull requests targeting main.
+
+### Architectural decisions
+- The first personalization model is deterministic and explainable; ML personalization is deferred until there is enough real user data to justify it.
+- The basket optimizer consumes domain candidates generated from the database rather than owning database access.
+- Repository/service boundaries are introduced before the DecisionOS layer so future decision logic does not become coupled to SQLAlchemy.
+
+### Known limitations
+- New users without purchase history receive neutral utility, so the optimizer has limited personalization for cold-start users.
+- Current candidate generation uses all positively priced catalog products; richer constraints and candidate selection are deferred to Phase 5.
+- Current price forecasting is not yet integrated into basket decisions.
+- No authentication/session system exists yet.
+- Automated CI verification is pending.
+
+### Next
+- Run Phase 1 through CI.
+- Fix any failures.
+- Complete cold-start/edge-case tests.
+- Then mark Phase 1 complete and begin Phase 2 (Personal Financial State).
 
 ## Phase 2 — Personal Financial State
 Status: Not started
