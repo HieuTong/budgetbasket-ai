@@ -86,7 +86,7 @@ def normalize_row(row: dict[str, str]) -> tuple[dict, dict] | None:
         "category": clean(row.get("Category")),
         "sub_category": clean(row.get("Sub_category")),
         "product_group": clean(row.get("Product_Group")),
-        "barcode": clean(row.get("Sku")),
+        # Sku is a retailer/source identifier, not a barcode.\n        "barcode": None,
         "package_size": clean(row.get("package_size")),
         "unit_price": float(price),
         "unit": clean(row.get("unit_price_unit")) or "each",
