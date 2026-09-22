@@ -62,7 +62,7 @@ class PriceObservation(Base):
 
     id = Column(Integer, primary_key=True)
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False, index=True)
-    store_id = Column(Integer, ForeignKey("stores.id"), nullable=False, index=True)
+    store_id = Column(Integer, ForeignKey("stores.id"), nullable=True, index=True)
 
     price = Column(Numeric(10, 2), nullable=False)
     unit_price = Column(Numeric(10, 4), nullable=True)
