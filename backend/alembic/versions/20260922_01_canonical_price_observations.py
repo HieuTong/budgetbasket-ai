@@ -1,7 +1,7 @@
 """establish canonical product and price observation schema
 
 Revision ID: 20260922_01
-Revises:
+Revises: 20260922_00
 Create Date: 2026-09-22
 """
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 revision = "20260922_01"
-down_revision = None
+down_revision = "20260922_00"
 branch_labels = None
 depends_on = None
 
@@ -69,7 +69,7 @@ def upgrade() -> None:
         "price_observations",
         sa.Column("id", sa.Integer(), primary_key=True),
         sa.Column("product_id", sa.Integer(), sa.ForeignKey("products.id"), nullable=False),
-        sa.Column("store_id", sa.Integer(), sa.ForeignKey("stores.id"), nullable=False),
+        sa.Column("store_id", sa.Integer(), sa.ForeignKey("stores.id"), nullable=True),
         sa.Column("price", sa.Numeric(10, 2), nullable=False),
         sa.Column("unit_price", sa.Numeric(10, 4), nullable=True),
         sa.Column("unit_price_unit", sa.String(), nullable=True),
