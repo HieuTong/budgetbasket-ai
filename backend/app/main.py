@@ -1,8 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
 from app.api.routes import basket, catalog, chat, purchases
 from app.core.config import settings
+from app.db.session import engine
 
 app = FastAPI(
     title="BudgetBasket AI",
@@ -27,3 +29,13 @@ app.include_router(chat.router, prefix="/api/chat", tags=["agent"])
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/ready")
+def readiness():
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="database_unavailable") from exc
+    return {"status": "ready"}
