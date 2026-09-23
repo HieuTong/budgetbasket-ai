@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.db.repositories.prices import list_product_prices
@@ -21,7 +21,7 @@ def products(
 def product_prices(product_id: int, db: Session = Depends(get_db)):
     product = get_product(db, product_id)
     if product is None:
-        return {"error": "product_not_found"}
+        raise HTTPException(status_code=404, detail="product_not_found")
 
     observations = list_product_prices(db, product_id)
     return {
