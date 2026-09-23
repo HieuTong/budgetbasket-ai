@@ -1,0 +1,29 @@
+from sqlalchemy.orm import Session
+
+from app.db.repositories.prices import get_latest_product_price
+from app.db.repositories.products import list_products
+
+
+def list_catalog(db: Session, category: str | None = None) -> list[dict]:
+    products = list_products(db)
+    if category:
+        products = [product for product in products if product.category == category]
+
+    catalog = []
+    for product in products:
+        latest = get_latest_product_price(db, product.id)
+        catalog.append(
+            {
+                "product_id": product.id,
+                "name": product.name,
+                "brand": product.brand,
+                "category": product.category,
+                "sub_category": product.sub_category,
+                "package_size": product.package_size,
+                "unit": product.unit,
+                "price": float(latest.price) if latest else product.unit_price,
+                "price_observed_at": latest.observed_at if latest else None,
+                "price_source": latest.source if latest else "product_seed",
+            }
+        )
+    return catalog
