@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 
-from app.db.repositories.prices import get_latest_product_price
+from app.db.repositories.prices import get_latest_prices_for_products
 from app.db.repositories.products import list_products
 
 
@@ -9,9 +9,11 @@ def list_catalog(db: Session, category: str | None = None) -> list[dict]:
     if category:
         products = [product for product in products if product.category == category]
 
+    latest_prices = get_latest_prices_for_products(db, [product.id for product in products])
+
     catalog = []
     for product in products:
-        latest = get_latest_product_price(db, product.id)
+        latest = latest_prices.get(product.id)
         catalog.append(
             {
                 "product_id": product.id,
