@@ -6,8 +6,8 @@ Australia_Grocery_2022Sep.csv from the Kaggle dataset and pass its path:
     python -m seed.import_grocery_dataset /path/to/Australia_Grocery_2022Sep.csv
 
 Use --dry-run first. This importer only maps fields we currently need.
-It does not pretend that state/city is a retailer and therefore leaves
-price_observations.store_id NULL until a retailer-specific source is added.
+The retailer is derived from the product URL domain; brand remains a separate
+product attribute. Location fields are preserved on each price observation.
 """
 
 import argparse
@@ -15,12 +15,14 @@ import csv
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
+from urllib.parse import urlparse
 
-from app.db.models import PriceObservation, Product
+from app.db.models import PriceObservation, Product, Store
 from app.db.session import SessionLocal
 
 
 SOURCE = "kaggle_australia_grocery_2022"
+COLES_DOMAIN = "shop.coles.com.au"
 REQUIRED_COLUMNS = {
     "Sku",
     "Product_Name",
@@ -71,6 +73,16 @@ def parse_datetime(value: str | None) -> datetime | None:
     return None
 
 
+def retailer_from_url(url: str | None) -> str | None:
+    url = clean(url)
+    if not url:
+        return None
+    domain = urlparse(url).netloc.lower()
+    if domain == COLES_DOMAIN:
+        return "Coles"
+    return None
+
+
 def normalize_row(row: dict[str, str]) -> tuple[dict, dict] | None:
     price = parse_decimal(row.get("Package_price"))
     if price is None:
@@ -100,6 +112,9 @@ def normalize_row(row: dict[str, str]) -> tuple[dict, dict] | None:
     )
 
     observation_data = {
+        "postal_code": clean(row.get("Postal_code")),
+        "state": clean(row.get("state")),
+        "city": clean(row.get("city")),
         "price": price,
         "unit_price": parse_decimal(row.get("unit_price")),
         "unit_price_unit": clean(row.get("unit_price_unit")),
@@ -119,6 +134,7 @@ def import_csv(csv_path: Path, dry_run: bool = False) -> tuple[int, int]:
     products_created = 0
     observations_created = 0
     seen_products: dict[tuple, Product] = {}
+    stores: dict[str, Store] = {}
 
     with csv_path.open(newline="", encoding="utf-8-sig") as handle:
         reader = csv.DictReader(handle)
@@ -161,23 +177,40 @@ def import_csv(csv_path: Path, dry_run: bool = False) -> tuple[int, int]:
                         products_created += 1
                     seen_products[key] = product
 
-                if not dry_run:
-                    existing = (
-                        db.query(PriceObservation)
-                        .filter_by(
-                            source=SOURCE,
-                            source_record_id=observation_data["source_record_id"],
+                retailer = retailer_from_url(observation_data["source_url"])
+                store = None
+                if not dry_run and retailer is not None:
+                    store = stores.get(retailer)
+                    if store is None:
+                        store = (
+                            db.query(Store)
+                            .filter(Store.name == retailer)
+                            .first()
                         )
-                        .first()
+                        if store is None:
+                            store = Store(name=retailer)
+                            db.add(store)
+                            db.flush()
+                        stores[retailer] = store
+
+                existing = (
+                    db.query(PriceObservation)
+                    .filter_by(
+                        source=SOURCE,
+                        source_record_id=observation_data["source_record_id"],
                     )
-                    if existing is None:
+                    .first()
+                )
+                if existing is None:
+                    observations_created += 1
+                    if not dry_run:
                         db.add(
                             PriceObservation(
                                 product_id=product.id,
+                                store_id=store.id if store else None,
                                 **observation_data,
                             )
                         )
-                        observations_created += 1
 
             if dry_run:
                 db.rollback()
