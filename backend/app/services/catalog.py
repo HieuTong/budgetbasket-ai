@@ -5,10 +5,7 @@ from app.db.repositories.products import list_products
 
 
 def list_catalog(db: Session, category: str | None = None) -> list[dict]:
-    products = list_products(db)
-    if category:
-        products = [product for product in products if product.category == category]
-
+    products = list_products(db, category=category)
     latest_prices = get_latest_prices_for_products(db, [product.id for product in products])
 
     catalog = []
