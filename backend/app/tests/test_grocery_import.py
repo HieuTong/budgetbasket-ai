@@ -24,6 +24,7 @@ def test_normalize_grocery_row():
         "RunDate": "2022-09-30",
         "unit_price": "5.00",
         "unit_price_unit": "kg",
+        "Postal_code": "3000",
         "state": "VIC",
         "city": "Melbourne",
     }
@@ -36,6 +37,9 @@ def test_normalize_grocery_row():
     assert product["barcode"] is None
     assert product["unit_price"] == 2.5
 
+    assert observation["postal_code"] == "3000"
+    assert observation["state"] == "VIC"
+    assert observation["city"] == "Melbourne"
     assert observation["price"] == Decimal("2.50")
     assert observation["unit_price"] == Decimal("5.00")
     assert observation["is_special"] is True
