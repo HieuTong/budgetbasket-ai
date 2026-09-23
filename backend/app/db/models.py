@@ -64,6 +64,12 @@ class PriceObservation(Base):
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False, index=True)
     store_id = Column(Integer, ForeignKey("stores.id"), nullable=True, index=True)
 
+    # Location belongs to the observation because the same product can have
+    # different observed prices across Australian markets.
+    postal_code = Column(String, nullable=True, index=True)
+    state = Column(String, nullable=True, index=True)
+    city = Column(String, nullable=True, index=True)
+
     price = Column(Numeric(10, 2), nullable=False)
     unit_price = Column(Numeric(10, 4), nullable=True)
     unit_price_unit = Column(String, nullable=True)
