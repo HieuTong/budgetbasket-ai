@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import basket, chat, purchases
+from app.api.routes import basket, catalog, chat, purchases
 from app.core.config import settings
 
 app = FastAPI(
@@ -18,6 +18,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(catalog.router, prefix="/api/catalog", tags=["catalog"])
 app.include_router(purchases.router, prefix="/api/purchases", tags=["purchases"])
 app.include_router(basket.router, prefix="/api/basket", tags=["basket"])
 app.include_router(chat.router, prefix="/api/chat", tags=["agent"])
