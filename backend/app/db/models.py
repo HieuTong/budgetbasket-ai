@@ -23,7 +23,7 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=True)
     email = Column(String, nullable=True, unique=True, index=True)
-    created_at = Column(datetime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     purchases = relationship("Purchase", back_populates="user")
     baskets = relationship("Basket", back_populates="user")
@@ -34,7 +34,7 @@ class Store(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False, unique=True)
-    created_at = Column(datetime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     price_observations = relationship(
         "PriceObservation",
@@ -86,12 +86,14 @@ class PriceObservation(Base):
     __tablename__ = "price_observations"
 
     id = Column(Integer, primary_key=True)
+
     product_id = Column(
         Integer,
         ForeignKey("products.id"),
         nullable=False,
         index=True,
     )
+
     store_id = Column(
         Integer,
         ForeignKey("stores.id"),
@@ -99,8 +101,8 @@ class PriceObservation(Base):
         index=True,
     )
 
-    # Location belongs to the observation because the same product can
-    # have different observed prices across Australian markets.
+    # Location belongs to the observation because the same product
+    # can have different observed prices across Australian markets.
     postal_code = Column(String, nullable=True, index=True)
     state = Column(String, nullable=True, index=True)
     city = Column(String, nullable=True, index=True)
@@ -130,6 +132,7 @@ class PriceObservation(Base):
         "Product",
         back_populates="price_observations",
     )
+
     store = relationship(
         "Store",
         back_populates="price_observations",
@@ -142,11 +145,14 @@ class PriceHistory(Base):
     __tablename__ = "price_history"
 
     id = Column(Integer, primary_key=True)
+
     product_id = Column(
         Integer,
         ForeignKey("products.id"),
     )
+
     price = Column(Float, nullable=False)
+
     recorded_at = Column(
         DateTime,
         default=datetime.utcnow,
@@ -232,8 +238,7 @@ class Purchase(Base):
     )
 
     # Raw transaction-level financial facts from the source dataset.
-    # These are intentionally nullable because older synthetic purchases
-    # do not contain these values.
+    # Nullable because older synthetic purchases do not contain these values.
     sales_value = Column(
         Numeric(12, 4),
         nullable=True,
