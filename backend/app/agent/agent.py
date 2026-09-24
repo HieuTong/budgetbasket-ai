@@ -62,9 +62,7 @@ class BudgetAgent:
         contents = [
             types.Content(
                 role="user",
-                parts=[types.Part(text=f"Context: {json.dumps(context)}
-
-Request: {user_message}")],
+                parts=[types.Part(text=f"Context: {json.dumps(context)}\n\nRequest: {user_message}")],
             )
         ]
 
