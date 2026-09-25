@@ -141,6 +141,9 @@ def find_cheaper_substitutes(
     - semantic similarity
     - price savings
     - user's historical preference
+
+    Each result also includes a deterministic explanation describing
+    why the candidate was recommended.
     """
 
     if product.unit_price <= 0:
@@ -231,6 +234,18 @@ def find_cheaper_substitutes(
             + 0.20 * preference
         )
 
+        if purchases:
+            reason = (
+                f"Similar product with "
+                f"{savings_percent:.2f}% lower price "
+                f"and matches your purchase preferences."
+            )
+        else:
+            reason = (
+                f"Similar product with "
+                f"{savings_percent:.2f}% lower price."
+            )
+
         enriched.append(
             {
                 "product": candidate,
@@ -254,6 +269,7 @@ def find_cheaper_substitutes(
                     score,
                     4,
                 ),
+                "reason": reason,
             }
         )
 

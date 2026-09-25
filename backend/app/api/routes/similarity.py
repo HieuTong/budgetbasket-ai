@@ -140,6 +140,7 @@ def get_cheaper_substitutes(
                 "savings_percent": item["savings_percent"],
                 "preference": item["preference"],
                 "score": item["score"],
+                "reason": item["reason"],
             }
             for item in results
         ],
