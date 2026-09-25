@@ -19,6 +19,7 @@ router = APIRouter(
 def get_similar_products(
     product_id: int,
     top_k: int = 5,
+    user_id: int | None = None,
     db: Session = Depends(get_db),
 ):
     product = (
@@ -38,9 +39,21 @@ def get_similar_products(
         .all()
     )
 
+    purchases = []
+
+    if user_id is not None:
+        purchases = (
+            db.query(Purchase)
+            .filter(
+                Purchase.user_id == user_id,
+            )
+            .all()
+        )
+
     results = find_similar_products(
         product=product,
         products=products,
+        purchases=purchases,
         top_k=top_k,
     )
 
