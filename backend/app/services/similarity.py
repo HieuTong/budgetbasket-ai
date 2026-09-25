@@ -1,9 +1,5 @@
 from __future__ import annotations
 
-from sqlalchemy import func
-from sqlalchemy.orm import Session
-
-from app.db.models import DBProduct
 from app.db.models import Product as DBProduct
 from app.db.models import Purchase
 from app.ml.similarity import Product as SimilarityProduct
