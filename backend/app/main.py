@@ -8,6 +8,7 @@ from app.api.routes import (
     chat,
     purchases,
     price_intelligence,
+    decision,
     similarity,
 )
 from app.api.routes.purchase_profile import router as purchase_profile_router
@@ -65,6 +66,11 @@ app.include_router(
 
 app.include_router(
     similarity.router,
+    prefix="/api",
+)
+
+app.include_router(
+    decision.router,
     prefix="/api",
 )
 
