@@ -25,16 +25,12 @@ def build_purchase_profile(
     now: datetime | None = None,
     analysis_period_days: int = 365,
 ) -> UserPurchaseProfile:
-    now = now or datetime.utcnow()
-
     user_purchases = [
         purchase
         for purchase in purchases
         if (
             purchase.user_id == user_id
             and purchase.purchased_at is not None
-            and purchase.purchased_at
-            >= now - timedelta(days=analysis_period_days)
         )
     ]
 
@@ -52,14 +48,32 @@ def build_purchase_profile(
             product_frequency={},
         )
 
+    # For historical datasets such as Dunnhumby, use the user's
+    # latest available purchase as the reference point rather than
+    # the actual current date.
+    reference_date = max(
+        purchase.purchased_at
+        for purchase in user_purchases
+        if purchase.purchased_at is not None
+    )
+
+    cutoff = reference_date - timedelta(days=analysis_period_days)
+
+    filtered_purchases = [
+        purchase
+        for purchase in user_purchases
+        if purchase.purchased_at >= cutoff
+    ]
+
     product_frequency = Counter(
         purchase.product_id
-        for purchase in user_purchases
+        for purchase in filtered_purchases
+        if purchase.product_id is not None
     )
 
     category_frequency = Counter(
         purchase.product.category
-        for purchase in user_purchases
+        for purchase in filtered_purchases
         if (
             purchase.product is not None
             and purchase.product.category
@@ -68,14 +82,14 @@ def build_purchase_profile(
 
     total_quantity = sum(
         purchase.quantity or 0.0
-        for purchase in user_purchases
+        for purchase in filtered_purchases
     )
 
-    recent_cutoff = now - timedelta(days=30)
+    recent_cutoff = reference_date - timedelta(days=30)
 
     recent_purchase_count = sum(
         1
-        for purchase in user_purchases
+        for purchase in filtered_purchases
         if purchase.purchased_at >= recent_cutoff
     )
 
@@ -84,15 +98,15 @@ def build_purchase_profile(
     return UserPurchaseProfile(
         user_id=user_id,
         analysis_period_days=analysis_period_days,
-        transaction_count=len(user_purchases),
+        transaction_count=len(filtered_purchases),
         unique_products=len(product_frequency),
         unique_categories=len(category_frequency),
         average_quantity=round(
-            total_quantity / len(user_purchases),
+            total_quantity / len(filtered_purchases),
             2,
         ),
         purchases_per_month=round(
-            len(user_purchases) / months,
+            len(filtered_purchases) / months,
             2,
         ),
         recent_purchase_count=recent_purchase_count,
