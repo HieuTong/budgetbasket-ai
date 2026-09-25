@@ -21,7 +21,6 @@ similarity implementation can later be replaced by embeddings.
 
 from __future__ import annotations
 
-from collections import Counter
 from dataclasses import dataclass
 
 import numpy as np
@@ -177,20 +176,36 @@ def package_compatible(
     candidate: Package | None,
 ) -> bool:
     """
-    Determine whether two package sizes are comparable.
+    Determine whether two package sizes are reasonably comparable.
 
     If either package size cannot be parsed, the candidate is allowed
     through because we do not have enough information to reject it.
 
-    Known compatible units must match exactly:
-        10 LB -> 5 LB   compatible
-        10 LB -> 15 LB  compatible
-        10 LB -> 60 CT  incompatible
+    Known compatible units must match, and package quantities must be
+    within a 0.5x to 2.0x range.
+
+    Examples:
+        500 G -> 250 G   compatible
+        500 G -> 500 G   compatible
+        500 G -> 750 G   compatible
+        500 G -> 50 G    incompatible
+        500 G -> 2 KG    incompatible
+        500 G -> 4 CT    incompatible
     """
     if base is None or candidate is None:
         return True
 
-    return base.unit == candidate.unit
+    if base.unit != candidate.unit:
+        return False
+
+    if base.quantity <= 0 or candidate.quantity <= 0:
+        return False
+
+    quantity_ratio = (
+        candidate.quantity / base.quantity
+    )
+
+    return 0.5 <= quantity_ratio <= 2.0
 
 
 def compatible_candidates(
@@ -203,7 +218,7 @@ def compatible_candidates(
     Candidates must:
     - not be the base product itself
     - belong to the same product concept
-    - use a compatible package unit
+    - use a compatible package size
 
     This is candidate generation, not final ranking.
     """
@@ -269,7 +284,7 @@ class SimilarityIndex:
 
         Candidate generation happens before similarity ranking:
         - same product concept
-        - compatible package unit
+        - compatible package unit and quantity
         - exclude the requested product
 
         This prevents unrelated products from entering the similarity
