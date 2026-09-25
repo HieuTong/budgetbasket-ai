@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
 from app.api.routes import basket, catalog, chat, purchases
+from app.api.routes.purchase_profile import router as purchase_profile_router
 from app.core.config import settings
 from app.db.session import engine
 
@@ -24,7 +25,7 @@ app.include_router(catalog.router, prefix="/api/catalog", tags=["catalog"])
 app.include_router(purchases.router, prefix="/api/purchases", tags=["purchases"])
 app.include_router(basket.router, prefix="/api/basket", tags=["basket"])
 app.include_router(chat.router, prefix="/api/chat", tags=["agent"])
-
+app.include_router(purchase_profile_router, prefix="/api")
 
 @app.get("/health")
 def health():

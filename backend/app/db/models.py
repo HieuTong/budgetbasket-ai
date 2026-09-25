@@ -232,13 +232,24 @@ class Purchase(Base):
         index=True,
     )
 
+    source = Column(
+        String,
+        nullable=True,
+        index=True,
+    )
+
+    source_transaction_id = Column(
+        String,
+        nullable=True,
+        index=True,
+    )
+
     quantity = Column(
         Float,
         default=1.0,
     )
 
     # Raw transaction-level financial facts from the source dataset.
-    # Nullable because older synthetic purchases do not contain these values.
     sales_value = Column(
         Numeric(12, 4),
         nullable=True,
