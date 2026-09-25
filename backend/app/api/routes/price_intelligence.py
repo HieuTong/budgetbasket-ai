@@ -1,9 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.db.models import PriceObservation, Product
+from app.db.models import PriceObservation, Product, Purchase
 from app.db.session import get_db
-from app.services.price_intelligence import build_market_price_snapshot
+from app.services.price_intelligence import (
+    build_market_price_snapshot,
+    build_product_price_history,
+)
 
 
 router = APIRouter(
@@ -31,7 +34,9 @@ def get_market_price_snapshot(
 
     observations = (
         db.query(PriceObservation)
-        .filter(PriceObservation.product_id == product_id)
+        .filter(
+            PriceObservation.product_id == product_id
+        )
         .all()
     )
 
@@ -49,4 +54,51 @@ def get_market_price_snapshot(
         "observation_count": snapshot.observation_count,
         "location_count": snapshot.location_count,
         "observed_at": snapshot.observed_at,
+    }
+
+
+@router.get("/{product_id}/history")
+def get_product_price_history(
+    product_id: int,
+    db: Session = Depends(get_db),
+):
+    product = (
+        db.query(Product)
+        .filter(Product.id == product_id)
+        .first()
+    )
+
+    if product is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Product not found",
+        )
+
+    purchases = (
+        db.query(Purchase)
+        .filter(
+            Purchase.product_id == product_id,
+            Purchase.source == "dunnhumby_complete_journey",
+        )
+        .order_by(Purchase.purchased_at)
+        .all()
+    )
+
+    history = build_product_price_history(
+        product=product,
+        purchases=purchases,
+    )
+
+    return {
+        "product_id": history.product_id,
+        "product_name": history.product_name,
+        "observation_count": history.observation_count,
+        "points": [
+            {
+                "date": point.date.isoformat(),
+                "unit_price": point.unit_price,
+                "transaction_count": point.transaction_count,
+            }
+            for point in history.points
+        ],
     }
