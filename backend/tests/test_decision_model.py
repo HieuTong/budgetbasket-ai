@@ -1,7 +1,7 @@
 from datetime import date, timedelta
 
 import pytest
-
+from app.services.decision_prior import build_product_prior
 from app.ml.forecasting import PricePoint
 from app.services.decision_features import (
     build_price_features,
@@ -431,3 +431,169 @@ def test_probability_dictionary_contains_all_states():
         STABLE,
         DECREASE,
     }
+
+def test_fit_m1_requires_equal_feature_prior_lengths():
+    model = PriceDirectionModel()
+
+    features, targets = _training_data()
+    priors = [
+        build_product_prior(
+            [INCREASE, STABLE, DECREASE]
+        )
+        for _ in range(len(features) - 1)
+    ]
+
+    with pytest.raises(
+        ValueError,
+        match="features and priors must have equal length",
+    ):
+        model.fit_m1(
+            features=features,
+            priors=priors,
+            targets=targets,
+        )
+
+
+def test_fit_m1_requires_equal_feature_target_lengths():
+    model = PriceDirectionModel()
+
+    features, _ = _training_data()
+    priors = [
+        build_product_prior(
+            [INCREASE, STABLE, DECREASE]
+        )
+        for _ in features
+    ]
+
+    with pytest.raises(
+        ValueError,
+        match="features and targets must have equal length",
+    ):
+        model.fit_m1(
+            features=features,
+            priors=priors,
+            targets=[],
+        )
+
+
+def test_predict_proba_m1_requires_fitted_model():
+    model = PriceDirectionModel()
+
+    prior = build_product_prior(
+        [INCREASE, STABLE, DECREASE]
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="M1 PriceDirectionModel must be fitted",
+    ):
+        model.predict_proba_m1(
+            _features(
+                [
+                    8.00,
+                    8.10,
+                    8.20,
+                    8.30,
+                    8.40,
+                ]
+            ),
+            prior,
+        )
+
+
+def test_fit_m1_and_predict_proba_m1_returns_valid_probability_distribution():
+    features, targets = _training_data()
+
+    priors = [
+        build_product_prior(
+            [
+                INCREASE,
+                STABLE,
+                DECREASE,
+            ]
+        )
+        for _ in features
+    ]
+
+    model = PriceDirectionModel()
+
+    model.fit_m1(
+        features=features,
+        priors=priors,
+        targets=targets,
+    )
+
+    probabilities = model.predict_proba_m1(
+        _features(
+            [
+                8.00,
+                8.10,
+                8.20,
+                8.30,
+                8.50,
+            ]
+        ),
+        build_product_prior(
+            [
+                INCREASE,
+                STABLE,
+                DECREASE,
+            ]
+        ),
+    )
+
+    assert 0.0 <= probabilities.increase <= 1.0
+    assert 0.0 <= probabilities.stable <= 1.0
+    assert 0.0 <= probabilities.decrease <= 1.0
+
+    total = (
+        probabilities.increase
+        + probabilities.stable
+        + probabilities.decrease
+    )
+
+    assert total == pytest.approx(
+        1.0,
+        abs=0.001,
+    )
+
+
+def test_fit_m1_rejects_unknown_targets():
+    model = PriceDirectionModel()
+
+    features, _ = _training_data()
+
+    priors = [
+        build_product_prior(
+            [INCREASE, STABLE, DECREASE]
+        )
+        for _ in features
+    ]
+
+    targets = [
+        INCREASE,
+        STABLE,
+        DECREASE,
+        INCREASE,
+        STABLE,
+        DECREASE,
+        INCREASE,
+        STABLE,
+        DECREASE,
+        "UNKNOWN",
+        STABLE,
+        STABLE,
+        STABLE,
+        STABLE,
+        STABLE,
+    ]
+
+    with pytest.raises(
+        ValueError,
+        match="Unknown training targets",
+    ):
+        model.fit_m1(
+            features=features,
+            priors=priors,
+            targets=targets,
+        )

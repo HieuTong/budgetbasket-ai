@@ -1,5 +1,7 @@
 from datetime import datetime
 
+import pytest
+
 from app.db.models import Product, Purchase
 from app.services.decision_dataset import (
     DecisionDatasetBuilder,
@@ -9,7 +11,7 @@ from app.services.decision_model import (
     INCREASE,
     STABLE,
 )
-
+from app.services.decision_prior import build_product_prior
 
 def _product(
     product_id: int,
@@ -254,3 +256,131 @@ def test_dataset_keeps_product_and_date_alignment():
         }
     )
 
+def test_builder_creates_m1_dataset():
+    product = _product(1)
+
+    purchases = _weekly_purchases(
+        1,
+        [
+            2.00,
+            2.00,
+            2.00,
+            2.00,
+            2.00,
+            2.10,
+            2.20,
+            2.30,
+            2.40,
+            2.50,
+            2.50,
+            2.50,
+            2.50,
+        ],
+    )
+
+    builder = DecisionDatasetBuilder(
+        lookback_weeks=4,
+        forecast_horizon_weeks=4,
+        min_weekly_observations=9,
+    )
+
+    dataset = builder.build_m1(
+        products=[product],
+        purchases=purchases,
+    )
+
+    assert dataset.sample_count > 0
+    assert len(dataset.priors) == dataset.sample_count
+    assert len(dataset.targets) == dataset.sample_count
+    assert len(dataset.product_ids) == dataset.sample_count
+    assert len(dataset.current_dates) == dataset.sample_count
+    assert len(dataset.future_dates) == dataset.sample_count
+
+
+def test_m1_prior_uses_only_history_before_current_date():
+    product = _product(1)
+
+    purchases = _weekly_purchases(
+        1,
+        [
+            2.00,
+            2.00,
+            2.00,
+            2.00,
+            2.00,
+            2.00,
+            2.00,
+            2.00,
+            2.00,
+            3.00,
+            3.00,
+            3.00,
+            3.00,
+        ],
+    )
+
+    builder = DecisionDatasetBuilder(
+        lookback_weeks=4,
+        forecast_horizon_weeks=4,
+        min_weekly_observations=9,
+    )
+
+    dataset = builder.build_m1(
+        products=[product],
+        purchases=purchases,
+    )
+
+    assert dataset.sample_count > 0
+
+    first_prior = dataset.priors[0]
+
+    assert first_prior.history_count == 0
+    assert first_prior.increase == 1 / 3
+    assert first_prior.stable == 1 / 3
+    assert first_prior.decrease == 1 / 3
+
+
+def test_m1_priors_are_valid_probability_distributions():
+    product = _product(1)
+
+    purchases = _weekly_purchases(
+        1,
+        [
+            2.00,
+            2.00,
+            2.00,
+            2.00,
+            2.00,
+            2.10,
+            2.00,
+            2.10,
+            2.00,
+            2.10,
+            2.00,
+            2.10,
+            2.00,
+        ],
+    )
+
+    builder = DecisionDatasetBuilder(
+        lookback_weeks=4,
+        forecast_horizon_weeks=4,
+        min_weekly_observations=9,
+    )
+
+    dataset = builder.build_m1(
+        products=[product],
+        purchases=purchases,
+    )
+
+    assert dataset.sample_count > 0
+
+    for prior in dataset.priors:
+        total = (
+            prior.increase
+            + prior.stable
+            + prior.decrease
+        )
+
+        assert total == pytest.approx(1.0)
+        assert prior.history_count >= 0

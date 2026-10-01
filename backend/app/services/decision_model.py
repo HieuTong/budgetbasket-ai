@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import numpy as np
 from sklearn.linear_model import LogisticRegression
@@ -10,7 +11,11 @@ from sklearn.preprocessing import StandardScaler
 from app.services.decision_features import (
     PriceFeatures,
     feature_vector,
+    m1_feature_vector,
 )
+
+if TYPE_CHECKING:
+    from app.services.decision_prior import ProductPrior
 
 
 INCREASE = "INCREASE"
@@ -65,7 +70,15 @@ class PriceDirectionModel:
     ):
         self.stable_threshold = stable_threshold
 
-        self.model = Pipeline(
+        self.model = self._build_pipeline()
+        self.m1_model = self._build_pipeline()
+
+        self._fitted = False
+        self._m1_fitted = False
+
+    @staticmethod
+    def _build_pipeline() -> Pipeline:
+        return Pipeline(
             [
                 (
                     "scaler",
@@ -79,8 +92,6 @@ class PriceDirectionModel:
                 ),
             ]
         )
-
-        self._fitted = False
 
     def _target(
         self,
@@ -169,6 +180,67 @@ class PriceDirectionModel:
 
         self._fitted = True
 
+    def fit_m1(
+        self,
+        features: list[PriceFeatures],
+        priors: list[ProductPrior],
+        targets: list[str],
+    ) -> None:
+        """
+        Fit the M1 classifier using price features and product priors.
+
+        M1 extends the nine M0 features with four prior features.
+        """
+
+        if len(features) != len(priors):
+            raise ValueError(
+                "features and priors must have equal length"
+            )
+
+        if len(features) != len(targets):
+            raise ValueError(
+                "features and targets must have equal length"
+            )
+
+        if len(features) < 10:
+            raise ValueError(
+                "At least 10 training examples are required"
+            )
+
+        invalid_targets = set(targets) - set(STATES)
+
+        if invalid_targets:
+            raise ValueError(
+                f"Unknown training targets: {sorted(invalid_targets)}"
+            )
+
+        if len(set(targets)) < 2:
+            raise ValueError(
+                "Training data must contain at least "
+                "two price-direction classes"
+            )
+
+        X = np.asarray(
+            [
+                m1_feature_vector(
+                    item,
+                    prior,
+                )
+                for item, prior in zip(
+                    features,
+                    priors,
+                )
+            ],
+            dtype=float,
+        )
+
+        self.m1_model.fit(
+            X,
+            targets,
+        )
+
+        self._m1_fitted = True
+
     def predict_proba(
         self,
         features: PriceFeatures,
@@ -189,7 +261,48 @@ class PriceDirectionModel:
             )
         )[0]
 
-        classes = self.model.named_steps[
+        return self._probability_from_model(
+            self.model,
+            probabilities,
+        )
+
+    def predict_proba_m1(
+        self,
+        features: PriceFeatures,
+        prior: ProductPrior,
+    ) -> PriceProbability:
+        """
+        Return the M1 probability distribution over price states.
+        """
+
+        if not self._m1_fitted:
+            raise RuntimeError(
+                "M1 PriceDirectionModel must be fitted before prediction"
+            )
+
+        probabilities = self.m1_model.predict_proba(
+            np.asarray(
+                [
+                    m1_feature_vector(
+                        features,
+                        prior,
+                    )
+                ],
+                dtype=float,
+            )
+        )[0]
+
+        return self._probability_from_model(
+            self.m1_model,
+            probabilities,
+        )
+
+    @staticmethod
+    def _probability_from_model(
+        model: Pipeline,
+        probabilities: np.ndarray,
+    ) -> PriceProbability:
+        classes = model.named_steps[
             "classifier"
         ].classes_
 
