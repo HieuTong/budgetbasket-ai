@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from statistics import median
 
@@ -38,7 +38,9 @@ class ProductPriceHistory:
     observation_count: int
 
 
-def _to_float(value: Decimal | float | int | None) -> float | None:
+def _to_float(
+    value: Decimal | float | int | None,
+) -> float | None:
     if value is None:
         return None
 
@@ -111,7 +113,9 @@ def build_market_price_snapshot(
     )
 
 
-def _dunnhumby_unit_price(purchase: Purchase) -> float | None:
+def _dunnhumby_unit_price(
+    purchase: Purchase,
+) -> float | None:
     """
     Calculate the Dunnhumby loyalty-card unit price.
 
@@ -207,4 +211,65 @@ def build_product_price_history(
             point.transaction_count
             for point in points
         ),
+    )
+
+
+def aggregate_weekly_price_history(
+    history: ProductPriceHistory,
+) -> ProductPriceHistory:
+    """
+    Aggregate daily price history into weekly median prices.
+
+    Weeks are anchored to Monday. Multiple daily observations within
+    the same week are represented by their median unit price.
+
+    The resulting points are suitable for models whose lookback and
+    forecast horizons are expressed in weeks.
+    """
+
+    weekly_prices: dict[date, list[PricePoint]] = {}
+
+    for point in history.points:
+        week_start = point.date - timedelta(
+            days=point.date.weekday()
+        )
+
+        weekly_prices.setdefault(
+            week_start,
+            [],
+        ).append(point)
+
+    weekly_points = []
+
+    for week_start, points in sorted(
+        weekly_prices.items()
+    ):
+        prices = [
+            point.unit_price
+            for point in points
+            if point.unit_price > 0
+        ]
+
+        if not prices:
+            continue
+
+        weekly_points.append(
+            PricePoint(
+                date=week_start,
+                unit_price=round(
+                    median(prices),
+                    2,
+                ),
+                transaction_count=sum(
+                    point.transaction_count
+                    for point in points
+                ),
+            )
+        )
+
+    return ProductPriceHistory(
+        product_id=history.product_id,
+        product_name=history.product_name,
+        points=weekly_points,
+        observation_count=history.observation_count,
     )

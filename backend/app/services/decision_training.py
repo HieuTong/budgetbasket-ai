@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 
 from app.ml.forecasting import PricePoint
 from app.services.decision_features import (
@@ -15,8 +16,8 @@ class TrainingExample:
 
     features: PriceFeatures
     target: str
-    current_date: object
-    future_date: object
+    current_date: date
+    future_date: date
 
 
 class PriceTrainingBuilder:
@@ -89,9 +90,8 @@ class PriceTrainingBuilder:
 
         A training example requires:
 
-        - lookback_weeks + 1 historical observations
-        - one future observation at forecast_horizon_weeks
-          after the current observation
+        - a historical lookback window
+        - a future observation after the current observation
         """
 
         if not history:
@@ -102,8 +102,6 @@ class PriceTrainingBuilder:
             key=lambda point: point.date,
         )
 
-        examples: list[TrainingExample] = []
-
         minimum_history = (
             self.lookback_weeks
             + self.forecast_horizon_weeks
@@ -112,6 +110,8 @@ class PriceTrainingBuilder:
 
         if len(ordered) < minimum_history:
             return []
+
+        examples: list[TrainingExample] = []
 
         for current_index in range(
             self.lookback_weeks,
@@ -169,9 +169,7 @@ def build_training_data(
     list[PriceFeatures],
     list[str],
 ]:
-    """
-    Build model-ready features and targets from price history.
-    """
+    """Build model-ready features and targets from price history."""
 
     builder = PriceTrainingBuilder(
         lookback_weeks=lookback_weeks,
