@@ -1,10 +1,14 @@
 from datetime import date, timedelta
 
+import pytest
+
 from app.ml.forecasting import PricePoint
 from app.services.decision_features import (
     build_price_features,
     feature_vector,
+    m1_feature_vector,
 )
+from app.services.decision_prior import build_product_prior
 
 
 def _history(
@@ -119,3 +123,41 @@ def test_single_price_has_zero_changes_and_volatility():
     assert features.change_1_week == 0.0
     assert features.change_4_week == 0.0
     assert features.volatility == 0.0
+
+
+def test_m1_feature_vector_contains_thirteen_features():
+    history = _history(
+        [
+            8.00,
+            8.10,
+            8.20,
+            8.30,
+            8.40,
+        ]
+    )
+
+    features = build_price_features(history)
+
+    assert features is not None
+
+    prior = build_product_prior(
+        [
+            "INCREASE",
+            "STABLE",
+            "DECREASE",
+        ]
+    )
+
+    vector = m1_feature_vector(
+        features,
+        prior,
+    )
+
+    assert len(vector) == 13
+
+    assert vector[:9] == feature_vector(features)
+
+    assert vector[9] == pytest.approx(1 / 3)
+    assert vector[10] == pytest.approx(1 / 3)
+    assert vector[11] == pytest.approx(1 / 3)
+    assert vector[12] == 3.0

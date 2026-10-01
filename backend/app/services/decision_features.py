@@ -2,8 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from statistics import mean, pstdev
+from typing import TYPE_CHECKING
 
 from app.ml.forecasting import PricePoint
+
+if TYPE_CHECKING:
+    from app.services.decision_prior import ProductPrior
 
 
 @dataclass(frozen=True)
@@ -147,4 +151,17 @@ def feature_vector(
         features.forecast_change_percent,
         features.forecast_confidence,
         float(features.observation_count),
+    ]
+
+
+def m1_feature_vector(
+    features: PriceFeatures,
+    prior: ProductPrior,
+) -> list[float]:
+    return [
+        *feature_vector(features),
+        prior.increase,
+        prior.stable,
+        prior.decrease,
+        float(prior.history_count),
     ]
