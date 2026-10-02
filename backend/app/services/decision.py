@@ -7,7 +7,11 @@ from app.services.decision_engine import (
     DecisionResult,
     make_decision,
 )
+from app.services.decision_features import build_price_features
+from app.services.decision_model_runtime import get_m1_model
+from app.services.decision_prior import build_product_prior
 from app.services.price_intelligence import (
+    aggregate_weekly_price_history,
     build_product_price_history,
 )
 from app.services.similarity import (
@@ -62,6 +66,76 @@ def make_product_decision(
         else None
     )
 
+    weekly_history = aggregate_weekly_price_history(
+        history
+    )
+
+    price_features = build_price_features(
+        history=weekly_history.points,
+        forecast_change_percent=forecast[
+            "forecast_change_percent"
+        ],
+        forecast_confidence=forecast[
+            "confidence"
+        ],
+    )
+
+    price_probability = None
+
+    if price_features is not None:
+        current_date = weekly_history.points[-1].date
+
+        historical_targets = []
+
+        for index in range(
+            4,
+            len(weekly_history.points),
+        ):
+            current = weekly_history.points[index]
+
+            if current.date >= current_date:
+                break
+
+            future_index = index + 4
+
+            if future_index >= len(weekly_history.points):
+                break
+
+            future = weekly_history.points[future_index]
+
+            change = (
+                (future.unit_price - current.unit_price)
+                / current.unit_price
+                if current.unit_price > 0
+                else 0.0
+            )
+
+            if change > 0.02:
+                historical_targets.append(
+                    "INCREASE"
+                )
+            elif change < -0.02:
+                historical_targets.append(
+                    "DECREASE"
+                )
+            else:
+                historical_targets.append(
+                    "STABLE"
+                )
+
+        prior = build_product_prior(
+            historical_targets
+        )
+
+        try:
+            model = get_m1_model()
+            price_probability = model.predict_proba_m1(
+                features=price_features,
+                prior=prior,
+            )
+        except FileNotFoundError:
+            price_probability = None
+
     evidence = DecisionEvidence(
         current_price=(
             forecast["current_price"]
@@ -83,6 +157,7 @@ def make_product_decision(
             if best_substitute is not None
             else None
         ),
+        price_probability=price_probability,
     )
 
     return make_decision(evidence)

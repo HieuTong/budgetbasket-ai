@@ -2,6 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.services.decision_model import PriceProbability
 
 
 class Decision(str, Enum):
@@ -21,6 +25,7 @@ class DecisionEvidence:
     forecast_confidence: float | None = None
     substitute_similarity: float | None = None
     substitute_savings_percent: float | None = None
+    price_probability: PriceProbability | None = None
 
 
 @dataclass(frozen=True)
@@ -30,6 +35,7 @@ class DecisionResult:
     decision: Decision
     confidence: float
     reason: str
+    price_probability: PriceProbability | None = None
 
 
 def make_decision(
@@ -57,6 +63,7 @@ def make_decision(
             decision=Decision.NO_ACTION,
             confidence=0.0,
             reason="Current price is unavailable or invalid.",
+            price_probability=evidence.price_probability,
         )
 
     if (
@@ -82,6 +89,7 @@ def make_decision(
                 "A sufficiently similar alternative provides "
                 "meaningful price savings."
             ),
+            price_probability=evidence.price_probability,
         )
 
     if (
@@ -107,6 +115,7 @@ def make_decision(
                 "The forecast indicates a meaningful price increase "
                 "with reasonable confidence."
             ),
+            price_probability=evidence.price_probability,
         )
 
     if (
@@ -129,6 +138,7 @@ def make_decision(
                 "The current price is not expected to increase "
                 "meaningfully."
             ),
+            price_probability=evidence.price_probability,
         )
 
     return DecisionResult(
@@ -138,5 +148,6 @@ def make_decision(
             "There is not enough reliable evidence to recommend "
             "buying, waiting, or substituting."
         ),
+        price_probability=evidence.price_probability,
     )
 

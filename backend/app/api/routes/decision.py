@@ -55,10 +55,17 @@ def get_product_decision(
         forecast_horizon_weeks=forecast_horizon_weeks,
     )
 
-    return {
+    response = {
         "product_id": product.id,
         "product_name": product.name,
         "decision": result.decision.value,
         "confidence": result.confidence,
         "reason": result.reason,
     }
+
+    if result.price_probability is not None:
+        response["price_probability"] = (
+            result.price_probability.as_dict()
+        )
+
+    return response
