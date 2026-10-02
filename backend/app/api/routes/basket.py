@@ -9,6 +9,7 @@ from app.schemas import BasketRequest
 from app.services.personalization import (
     build_personalization_profile,
     personalized_utility_from_fields,
+    usual_quantity_from_profile,
 )
 
 router = APIRouter()
@@ -53,19 +54,26 @@ def optimize(req: BasketRequest, db: Session = Depends(get_db)):
                 reference_date=reference_date,
             )
 
+        usual_quantity = usual_quantity_from_profile(
+            product_id,
+            profile,
+        )
+        
         candidates.append(
             BasketItem(
                 product_id=product_id,
                 name=name,
                 unit_price=unit_price,
                 utility=utility,
-                usual_quantity=1,
+                usual_quantity=usual_quantity,
+                max_quantity=usual_quantity,
             )
         )
 
     result = optimize_basket(
         candidates,
         req.budget,
+        max_distinct_products=14,
     )
 
     return {
@@ -85,3 +93,4 @@ def optimize(req: BasketRequest, db: Session = Depends(get_db)):
         "candidate_count": len(candidates),
         "purchase_history_count": len(purchases),
     }
+

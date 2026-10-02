@@ -291,6 +291,23 @@ def personalized_utility_from_fields(
     return 0.1
 
 
+def usual_quantity_from_profile(
+    product_id: int,
+    profile: PersonalizationProfile,
+) -> int:
+    average_quantity = profile.product_average_quantity.get(
+        product_id,
+        1.0,
+    )
+
+    return max(
+        1,
+        min(
+            3,
+            int(average_quantity + 0.5),
+        ),
+    )
+
 def build_basket_candidates(
     products: list[Product],
     purchases: list[Purchase],
