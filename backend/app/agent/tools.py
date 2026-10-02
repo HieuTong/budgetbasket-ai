@@ -35,12 +35,40 @@ def run_budget_optimizer_tool(
 
 def find_substitutes_tool(
     product_id: int,
-    products: list[Product],
+    db,
 ) -> list[dict]:
-    if not products:
+    target = (
+        db.query(DBProduct)
+        .filter(DBProduct.id == product_id)
+        .first()
+    )
+
+    if target is None:
         return []
 
+    priced_products = (
+        db.query(DBProduct)
+        .filter(DBProduct.unit_price > 0)
+        .all()
+    )
+
+    products = [
+        Product(
+            id=p.id,
+            name=p.name,
+            category=p.category or "",
+            unit_price=float(p.unit_price),
+            brand=p.brand or "",
+            sub_category=p.sub_category or "",
+            product_group=p.product_group or "",
+            package_size=p.package_size or "",
+            nutrition_tags=p.nutrition_tags or "",
+        )
+        for p in priced_products
+    ]
+
     index = SimilarityIndex(products)
+
     subs = index.cheaper_substitutes(product_id)
 
     return [

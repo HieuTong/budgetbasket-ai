@@ -1,5 +1,5 @@
 import json
-
+import time
 from google import genai
 from google.genai import types
 
@@ -8,22 +8,25 @@ from app.core.config import settings
 from app.ml.optimizer import BasketItem
 from app.ml.similarity import Product
 
+SYSTEM_PROMPT = (
+    "You are BudgetBasket AI, a grocery budgeting assistant for Australian households.\n\n"
+    "Use the user's catalog and purchase context.\n\n"
+    "When asked to optimize a basket, call the actual optimizer tool rather than doing arithmetic "
+    "yourself.\n\n"
+    "When the user asks whether to buy, wait, or make a purchasing decision for a specific product, "
+    "call the make_product_decision tool. Do not make the BUY, WAIT, SUBSTITUTE, or NO_ACTION decision yourself.\n\n"
+    "When the user asks for cheaper alternatives or substitution advice, call find_substitutes.\n\n"
+    "When the user asks how to save money or wants savings advice, call retrieve_savings_tips.\n\n"
+    "When multiple requested tools are independent, request all relevant tools in the same response "
+    "instead of waiting for one tool result before requesting another.\n\n"
+    "For example, if the user asks for a purchasing decision and cheaper substitutes, call "
+    "make_product_decision and find_substitutes together. If savings advice is also requested, "
+    "call retrieve_savings_tips together with them.\n\n"
+    "Never invent prices, products, purchase history, or nutrition claims. Do not treat retrieved "
+    "knowledge as a replacement for real product prices or DecisionOS results.\n\n"
+    "Explain recommendations using facts returned by the tools.\n"
+)
 
-SYSTEM_PROMPT = """You are BudgetBasket AI, a grocery budgeting assistant for Australian
-households.
-
-Use the user's catalog and purchase context.
-
-When asked to optimize a basket, call the actual optimizer tool rather than doing arithmetic
-yourself.
-
-When the user asks whether to buy, wait, or make a purchasing decision for a specific product,
-call the make_product_decision tool. Do not make the BUY, WAIT, or NO_ACTION decision yourself.
-
-Never invent prices, products, purchase history, or nutrition claims.
-
-Explain recommendations using facts returned by tools.
-"""
 
 
 TOOLS = [
@@ -139,11 +142,31 @@ class BudgetAgent:
         )
 
         for _ in range(max_steps):
-            resp = self.client.models.generate_content(
-                model=settings.LLM_MODEL,
-                contents=contents,
-                config=config,
-            )
+            resp = None
+
+            for attempt in range(2):
+                try:
+                    resp = self.client.models.generate_content(
+                        model=settings.LLM_MODEL,
+                        contents=contents,
+                        config=config,
+                    )
+                    break
+                except Exception as exc:
+                    if attempt == 1:
+                        print(
+                            f"[Agent] Gemini request failed: {exc}"
+                        )
+                        return (
+                            "I could not complete the request because "
+                            "the AI service is temporarily unavailable."
+                        )
+
+                    print(
+                        "[Agent] Gemini temporarily unavailable. "
+                        "Retrying..."
+                    )
+                    time.sleep(1)
 
             candidate = resp.candidates[0]
             contents.append(candidate.content)
@@ -174,10 +197,26 @@ class BudgetAgent:
                 )
 
                 if tool_fn:
+                    print(
+                        f"[Agent] Tool: {call.name}"
+                    )
+                    print(
+                        f"[Agent] Args: {args}"
+                    )
+
                     result = tool_fn(
                         **args,
                         **extra_args,
                     )
+
+                    if isinstance(result, dict):
+                        print(
+                            f"[Agent] Result: {result.get('decision', 'completed')}"
+                        )
+                    else:
+                        print(
+                            "[Agent] Result: completed"
+                        )
                 else:
                     result = {
                         "error": "unknown tool"
@@ -228,20 +267,8 @@ class BudgetAgent:
             }
 
         if fn_name == "find_substitutes":
-            products = [
-                (
-                    item
-                    if isinstance(item, Product)
-                    else Product(**item)
-                )
-                for item in context.get(
-                    "products",
-                    [],
-                )
-            ]
-
             return {
-                "products": products,
+                "db": db,
             }
 
         if fn_name == "make_product_decision":
