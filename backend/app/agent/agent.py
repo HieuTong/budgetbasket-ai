@@ -153,13 +153,33 @@ class BudgetAgent:
                     )
                     break
                 except Exception as exc:
-                    if attempt == 1:
+                    error_text = str(exc)
+
+                    if "429" in error_text:
+                        print(
+                            f"[Agent] Gemini quota exhausted: {exc}"
+                        )
+                        return (
+                            "The AI service quota has been reached. "
+                            "Please try again after the quota resets."
+                        )
+
+                    if "503" not in error_text:
                         print(
                             f"[Agent] Gemini request failed: {exc}"
                         )
                         return (
                             "I could not complete the request because "
                             "the AI service is temporarily unavailable."
+                        )
+
+                    if attempt == 1:
+                        print(
+                            f"[Agent] Gemini request failed after retry: {exc}"
+                        )
+                        return (
+                            "The AI service is temporarily unavailable. "
+                            "Please try again shortly."
                         )
 
                     print(

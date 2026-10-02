@@ -12,9 +12,18 @@ router = APIRouter()
 @router.get("/products")
 def products(
     category: str | None = Query(default=None),
+    search: str | None = Query(default=None),
+    limit: int = Query(default=20, ge=1, le=100),
     db: Session = Depends(get_db),
 ):
-    return {"items": list_catalog(db, category=category)}
+    return {
+        "items": list_catalog(
+            db,
+            category=category,
+            search=search,
+            limit=limit,
+        )
+    }
 
 
 @router.get("/products/{product_id}/prices")

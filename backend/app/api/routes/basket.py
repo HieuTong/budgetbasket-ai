@@ -1,34 +1,73 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.db.repositories.products import list_products
+from app.db.repositories.products import list_basket_products
 from app.db.repositories.purchases import get_user_purchases
 from app.db.session import get_db
 from app.ml.optimizer import BasketItem, optimize_basket
 from app.schemas import BasketRequest
-from app.services.personalization import personalized_utility
+from app.services.personalization import (
+    build_personalization_profile,
+    personalized_utility_from_fields,
+)
 
 router = APIRouter()
 
 
 @router.post("/optimize")
 def optimize(req: BasketRequest, db: Session = Depends(get_db)):
-    products = list_products(db)
+    products = list_basket_products(db)
     purchases = get_user_purchases(db, req.user_id)
 
-    candidates = [
-        BasketItem(
-            product_id=product.id,
-            name=product.name,
-            unit_price=product.unit_price,
-            utility=personalized_utility(product, purchases),
-            usual_quantity=1,
-        )
-        for product in products
-        if product.unit_price > 0
-    ]
+    profile = build_personalization_profile(
+        purchases
+    )
 
-    result = optimize_basket(candidates, req.budget)
+    reference_date = max(
+        (
+            purchase.purchased_at
+            for purchase in purchases
+            if purchase.purchased_at is not None
+        ),
+        default=None,
+    )
+
+    candidates = []
+
+    for product in products:
+        product_id = product.id
+        name = product.name
+        unit_price = float(product.unit_price)
+        category = product.category
+        sub_category = product.sub_category
+
+        utility = 0.5
+
+        if reference_date is not None:
+            utility = personalized_utility_from_fields(
+                product_id=product_id,
+                category=category,
+                sub_category=sub_category,
+                product_name=name,
+                profile=profile,
+                reference_date=reference_date,
+            )
+
+        candidates.append(
+            BasketItem(
+                product_id=product_id,
+                name=name,
+                unit_price=unit_price,
+                utility=utility,
+                usual_quantity=1,
+            )
+        )
+
+    result = optimize_basket(
+        candidates,
+        req.budget,
+    )
+
     return {
         "user_id": req.user_id,
         "items": [
