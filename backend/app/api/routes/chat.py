@@ -1,20 +1,36 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
 
 from app.agent.agent import BudgetAgent
-from app.ml.optimizer import BasketItem
+from app.db.repositories.purchases import get_user_purchases
+from app.db.session import get_db
 from app.schemas import ChatRequest
+
 
 router = APIRouter()
 
 
 @router.post("/")
-def chat(req: ChatRequest):
-    agent = BudgetAgent()
-    candidates = [
-        BasketItem(product_id=1, name="Milk 2L", unit_price=3.50, utility=0.9),
-        BasketItem(product_id=2, name="Bread", unit_price=3.00, utility=0.8),
-        BasketItem(product_id=3, name="Eggs 12pk", unit_price=6.50, utility=0.7),
-    ]
-    context = {"candidates": [c.__dict__ for c in candidates], "products": []}
-    reply = agent.run(req.message, context)
-    return {"reply": reply}
+def chat(
+    req: ChatRequest,
+    db: Session = Depends(get_db),
+):
+    purchases = get_user_purchases(
+        db,
+        req.user_id,
+    )
+
+    context = {
+        "user_id": req.user_id,
+        "purchase_history_count": len(purchases),
+    }
+
+    reply = BudgetAgent().run(
+        req.message,
+        context,
+        db,
+    )
+
+    return {
+        "reply": reply,
+    }

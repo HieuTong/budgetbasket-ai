@@ -1,9 +1,21 @@
 import os
 from functools import lru_cache
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+
+# Resolve the backend-local .env from the source tree rather than the process
+# working directory. This keeps CLI tools (Alembic, seed loaders, tests) and the
+# API consistent when they are invoked from different directories.
+BACKEND_DIR = Path(__file__).resolve().parents[2]
+load_dotenv(BACKEND_DIR / ".env")
 
 
 class Settings:
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/budgetbasket")
+    DATABASE_URL: str = os.getenv(
+        "DATABASE_URL", "postgresql://user:pass@localhost:5432/budgetbasket"
+    )
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
     EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "gemini-embedding-001")
     LLM_MODEL: str = os.getenv("LLM_MODEL", "gemini-2.5-flash")
