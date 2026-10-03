@@ -50,7 +50,7 @@ def upgrade() -> None:
         ("created_at", sa.DateTime()),
         ("updated_at", sa.DateTime()),
     ]:
-        op.add_column("products", sa.Column(column.name, column, nullable=True))
+        op.add_column("products", sa.Column(name, column, nullable=True))
 
     op.execute(
         "UPDATE products SET created_at = CURRENT_TIMESTAMP, "

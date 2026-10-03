@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
@@ -14,6 +16,9 @@ from app.api.routes import (
 from app.api.routes.purchase_profile import router as purchase_profile_router
 from app.core.config import settings
 from app.db.session import engine
+
+
+logger = logging.getLogger(__name__)
 
 
 app = FastAPI(
@@ -86,6 +91,7 @@ def readiness():
         with engine.connect() as connection:
             connection.execute(text("SELECT 1"))
     except Exception as exc:
+        logger.exception("Database readiness check failed")
         raise HTTPException(
             status_code=503,
             detail="database_unavailable",
