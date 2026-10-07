@@ -85,9 +85,9 @@ export default function Home() {
         />
       </div>
 
-      <div className="mb-6">
+      {/* <div className="mb-6">
         <SwapTips />
-      </div>
+      </div> */}
 
       <AgentChat userId={USER_ID} />
 
