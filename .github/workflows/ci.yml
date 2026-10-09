@@ -9,6 +9,22 @@ on:
 jobs:
   backend-test:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://user:pass@localhost:5432/budgetbasket
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: pass
+          POSTGRES_DB: budgetbasket
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U user -d budgetbasket"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     defaults:
       run:
         working-directory: backend
@@ -21,6 +37,8 @@ jobs:
         run: pip install -r requirements.txt
       - name: Import sanity check
         run: python -c "from app.main import app; print('app imports OK')"
+      - name: Create test database schema
+        run: python -c "from app.db.models import Base; from app.db.session import engine; Base.metadata.create_all(bind=engine)"
       - name: Run tests
         run: python -m pytest -q
 
