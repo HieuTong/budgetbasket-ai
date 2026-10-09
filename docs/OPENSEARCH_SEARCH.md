@@ -7,24 +7,21 @@ enriches them with price observations.
 
 ## Local setup
 
-1. Start PostgreSQL and OpenSearch:
+1. Start PostgreSQL, OpenSearch and the backend (legacy search remains the default):
 
    ```bash
-   docker compose up -d db opensearch
+   docker compose up -d --build db opensearch backend
    ```
 
-2. Install backend requirements and ensure the database schema and product data are
-   present:
+2. Build the index from the same database the containerized API uses:
 
    ```bash
-   cd backend
-   pip install -r requirements.txt
-   python -m seed.index_opensearch
+   docker compose exec backend python -m seed.index_opensearch
    ```
 
    Run the indexer again to upsert changed product documents. For a full local rebuild,
-   use `python -m seed.index_opensearch --recreate`; this deletes the configured index
-   before rebuilding it.
+   use `docker compose exec backend python -m seed.index_opensearch --recreate`; this
+   deletes the configured index before rebuilding it.
 
 3. Use OpenSearch for the API:
 
