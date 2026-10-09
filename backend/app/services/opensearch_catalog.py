@@ -3,7 +3,8 @@ from __future__ import annotations
 
 import os
 from urllib.parse import urlparse
-
+from app.core.config import BACKEND_DIR
+from app.core import config as _config
 
 def _client():
     try:

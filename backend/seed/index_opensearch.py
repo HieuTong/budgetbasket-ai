@@ -13,6 +13,11 @@ from opensearchpy import OpenSearch, helpers
 from app.db.models import Product
 from app.db.session import SessionLocal
 
+from app.core.config import BACKEND_DIR
+from dotenv import load_dotenv
+
+load_dotenv(BACKEND_DIR / ".env")
+
 
 INDEX = os.getenv("OPENSEARCH_PRODUCT_INDEX", "budgetbasket-products-v1")
 URL = os.getenv("OPENSEARCH_URL", "http://localhost:9200")
@@ -24,7 +29,34 @@ def make_client() -> OpenSearch:
     parsed = urlparse(URL)
     if parsed.scheme not in {"http", "https"} or not parsed.hostname:
         raise ValueError("OPENSEARCH_URL must be an absolute http(s) URL.")
+
     secure = parsed.scheme == "https"
+    username = os.getenv("OPENSEARCH_USERNAME")
+    password = os.getenv("OPENSEARCH_PASSWORD")
+    access_client_id = os.getenv("CF_ACCESS_CLIENT_ID")
+    access_client_secret = os.getenv("CF_ACCESS_CLIENT_SECRET")
+
+    if bool(username) != bool(password):
+        raise ValueError(
+            "OPENSEARCH_USERNAME and OPENSEARCH_PASSWORD must be set together."
+        )
+
+    if bool(access_client_id) != bool(access_client_secret):
+        raise ValueError(
+            "CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET must be set together."
+        )
+
+    headers = {}
+    if access_client_id and access_client_secret:
+        headers = {
+            "CF-Access-Client-Id": access_client_id,
+            "CF-Access-Client-Secret": access_client_secret,
+        }
+
+    kwargs = {}
+    if username and password:
+        kwargs["http_auth"] = (username, password)
+
     return OpenSearch(
         hosts=[{
             "host": parsed.hostname,
@@ -32,15 +64,17 @@ def make_client() -> OpenSearch:
         }],
         use_ssl=secure,
         verify_certs=secure,
+        headers=headers,
         timeout=10,
         max_retries=2,
         retry_on_timeout=True,
+        **kwargs,
     )
-
 
 def ensure_index(client: OpenSearch, *, recreate: bool) -> None:
     if recreate and client.indices.exists(index=INDEX):
         client.indices.delete(index=INDEX)
+
     if client.indices.exists(index=INDEX):
         return
 
@@ -63,15 +97,33 @@ def ensure_index(client: OpenSearch, *, recreate: bool) -> None:
                 "dynamic": "strict",
                 "properties": {
                     "product_id": {"type": "integer"},
-                    "name": {"type": "text", "fields": {
-                        "keyword": {"type": "keyword", "normalizer": "lowercase_normalizer"}
-                    }},
-                    "brand": {"type": "text", "fields": {
-                        "keyword": {"type": "keyword", "normalizer": "lowercase_normalizer"}
-                    }},
-                    "category": {"type": "text", "fields": {
-                        "keyword": {"type": "keyword", "normalizer": "lowercase_normalizer"}
-                    }},
+                    "name": {
+                        "type": "text",
+                        "fields": {
+                            "keyword": {
+                                "type": "keyword",
+                                "normalizer": "lowercase_normalizer",
+                            }
+                        },
+                    },
+                    "brand": {
+                        "type": "text",
+                        "fields": {
+                            "keyword": {
+                                "type": "keyword",
+                                "normalizer": "lowercase_normalizer",
+                            }
+                        },
+                    },
+                    "category": {
+                        "type": "text",
+                        "fields": {
+                            "keyword": {
+                                "type": "keyword",
+                                "normalizer": "lowercase_normalizer",
+                            }
+                        },
+                    },
                     "sub_category": {"type": "text"},
                     "product_group": {"type": "text"},
                     "package_size": {"type": "keyword"},
@@ -82,7 +134,6 @@ def ensure_index(client: OpenSearch, *, recreate: bool) -> None:
             },
         },
     )
-
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
