@@ -1,7 +1,9 @@
+import os
+
 from sqlalchemy.orm import Session
 
 from app.db.repositories.prices import get_latest_prices_for_products
-from app.db.repositories.products import list_products
+from app.db.repositories.products import get_products_by_ids_ordered, list_products
 
 
 def list_catalog(
@@ -10,12 +12,27 @@ def list_catalog(
     search: str | None = None,
     limit: int | None = None,
 ) -> list[dict]:
-    products = list_products(
-        db,
-        category=category,
-        search=search,
-        limit=limit,
-    )
+    backend = os.getenv("PRODUCT_SEARCH_BACKEND", "legacy").strip().lower()
+    if backend == "legacy":
+        products = list_products(
+            db,
+            category=category,
+            search=search,
+            limit=limit,
+        )
+    elif backend == "opensearch":
+        from app.services.opensearch_catalog import search_product_ids
+
+        product_ids = search_product_ids(
+            search=search,
+            category=category,
+            limit=limit if limit is not None else 100,
+        )
+        products = get_products_by_ids_ordered(db, product_ids)
+    else:
+        raise RuntimeError(
+            "Unsupported PRODUCT_SEARCH_BACKEND. Use 'legacy' or 'opensearch'."
+        )
 
     latest_prices = get_latest_prices_for_products(
         db,
