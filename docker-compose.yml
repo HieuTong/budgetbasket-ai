@@ -22,10 +22,7 @@ services:
       OPENSEARCH_URL: http://opensearch:9200
       OPENSEARCH_PRODUCT_INDEX: budgetbasket-products-v1
     depends_on:
-      db:
-        condition: service_started
-      opensearch:
-        condition: service_healthy
+      - db
 
   opensearch:
     image: opensearchproject/opensearch:2.15.0
