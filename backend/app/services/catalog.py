@@ -1,9 +1,12 @@
+import logging
 import os
 
 from sqlalchemy.orm import Session
 
 from app.db.repositories.prices import get_latest_prices_for_products
 from app.db.repositories.products import get_products_by_ids_ordered, list_products
+
+logger = logging.getLogger(__name__)
 
 
 def list_catalog(
@@ -21,14 +24,49 @@ def list_catalog(
             limit=limit,
         )
     elif backend == "opensearch":
+        from opensearchpy.exceptions import (
+            ConnectionError as OpenSearchConnectionError,
+            ConnectionTimeout,
+            TransportError,
+        )
+
         from app.services.opensearch_catalog import search_product_ids
 
-        product_ids = search_product_ids(
-            search=search,
-            category=category,
-            limit=limit if limit is not None else 100,
-        )
-        products = get_products_by_ids_ordered(db, product_ids)
+        try:
+            product_ids = search_product_ids(
+                search=search,
+                category=category,
+                limit=limit if limit is not None else 100,
+            )
+        except (OpenSearchConnectionError, ConnectionTimeout) as exc:
+            logger.warning(
+                "OpenSearch product search is unavailable; falling back to PostgreSQL: %s",
+                exc,
+            )
+            products = list_products(
+                db,
+                category=category,
+                search=search,
+                limit=limit,
+            )
+        except TransportError as exc:
+            # Do not hide mapping, index-name, authentication, or query errors.
+            # Fall back only for transient timeout, overload, or server failures.
+            if getattr(exc, "status_code", None) not in {408, 429, 500, 502, 503, 504}:
+                raise
+            logger.warning(
+                "OpenSearch product search returned transient HTTP status %s; "
+                "falling back to PostgreSQL",
+                getattr(exc, "status_code", None),
+            )
+            products = list_products(
+                db,
+                category=category,
+                search=search,
+                limit=limit,
+            )
+        else:
+            products = get_products_by_ids_ordered(db, product_ids)
     else:
         raise RuntimeError(
             "Unsupported PRODUCT_SEARCH_BACKEND. Use 'legacy' or 'opensearch'."
