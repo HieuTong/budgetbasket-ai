@@ -17,33 +17,83 @@ def _client():
     parsed = urlparse(url)
     if parsed.scheme not in {"http", "https"} or not parsed.hostname:
         raise RuntimeError("OPENSEARCH_URL must be an absolute http(s) URL.")
+
     use_ssl = parsed.scheme == "https"
-    host = {"host": parsed.hostname, "port": parsed.port or (443 if use_ssl else 80)}
-    if parsed.username:
-        host["http_auth"] = (parsed.username, parsed.password or "")
+    host = {
+        "host": parsed.hostname,
+        "port": parsed.port or (443 if use_ssl else 80),
+    }
+
+    username = os.getenv("OPENSEARCH_USERNAME") or parsed.username
+    password = os.getenv("OPENSEARCH_PASSWORD") or parsed.password
+
+    if username:
+        if not password:
+            raise RuntimeError(
+                "OPENSEARCH_PASSWORD is required when OPENSEARCH_USERNAME is set."
+            )
+        host["http_auth"] = (username, password)
+
+    headers = {}
+    access_client_id = os.getenv("CF_ACCESS_CLIENT_ID")
+    access_client_secret = os.getenv("CF_ACCESS_CLIENT_SECRET")
+
+    if bool(access_client_id) != bool(access_client_secret):
+        raise RuntimeError(
+            "CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET must be set together."
+        )
+
+    if access_client_id and access_client_secret:
+        headers = {
+            "CF-Access-Client-Id": access_client_id,
+            "CF-Access-Client-Secret": access_client_secret,
+        }
+
     return OpenSearch(
-        hosts=[host], use_ssl=use_ssl, verify_certs=use_ssl,
-        http_compress=True, timeout=3, max_retries=1, retry_on_timeout=True,
+        hosts=[host],
+        use_ssl=use_ssl,
+        verify_certs=use_ssl,
+        http_auth=host.get("http_auth"),
+        headers=headers,
+        http_compress=True,
+        timeout=10,
+        max_retries=1,
+        retry_on_timeout=True,
     )
 
 
-def search_product_ids(*, search: str | None, category: str | None, limit: int) -> list[int]:
+def search_product_ids(
+    *, search: str | None, category: str | None, limit: int
+) -> list[int]:
     """Return product IDs ranked by lexical relevance."""
     index = os.getenv("OPENSEARCH_PRODUCT_INDEX", "budgetbasket-products-v1")
     filters = []
     if category and category.strip():
         filters.append({"term": {"category.keyword": category.strip()}})
+
     query_text = (search or "").strip()
     if query_text:
         query = {
             "bool": {
-                "must": [{"multi_match": {
-                    "query": query_text, "type": "best_fields", "fuzziness": "AUTO",
-                    "fields": ["name^5", "brand^3", "sub_category^2", "product_group", "category"],
-                }}],
-                "should": [{"multi_match": {
-                    "query": query_text, "type": "phrase", "fields": ["name^8", "brand^4"], "boost": 2,
-                }}],
+                "must": [{
+                    "multi_match": {
+                        "query": query_text,
+                        "type": "best_fields",
+                        "fuzziness": "AUTO",
+                        "fields": [
+                            "name^5", "brand^3", "sub_category^2",
+                            "product_group", "category",
+                        ],
+                    }
+                }],
+                "should": [{
+                    "multi_match": {
+                        "query": query_text,
+                        "type": "phrase",
+                        "fields": ["name^8", "brand^4"],
+                        "boost": 2,
+                    }
+                }],
                 "filter": filters,
             }
         }
@@ -54,9 +104,15 @@ def search_product_ids(*, search: str | None, category: str | None, limit: int) 
 
     client = _client()
     try:
-        response = client.search(index=index, body={
-            "size": limit, "track_total_hits": False, "query": query, "sort": sort,
-        })
+        response = client.search(
+            index=index,
+            body={
+                "size": limit,
+                "track_total_hits": False,
+                "query": query,
+                "sort": sort,
+            },
+        )
     finally:
         client.close()
 

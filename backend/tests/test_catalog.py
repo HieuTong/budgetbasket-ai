@@ -1,10 +1,14 @@
+import pytest
 from types import SimpleNamespace
 from unittest.mock import Mock
-
 from opensearchpy.exceptions import ConnectionError as OpenSearchConnectionError
 
 from app.services import catalog
-import pytest
+from opensearchpy.exceptions import (
+    ConnectionError as OpenSearchConnectionError,
+    TransportError,
+)
+
 
 def test_list_catalog_falls_back_to_postgres_on_opensearch_connection_error(
     monkeypatch,
@@ -23,12 +27,12 @@ def test_list_catalog_falls_back_to_postgres_on_opensearch_connection_error(
     postgres_search = Mock(return_value=[product])
     latest_prices = Mock(return_value={})
     opensearch_search = Mock(
-    side_effect=OpenSearchConnectionError(
+        side_effect=OpenSearchConnectionError(
             "N/A",
             "OpenSearch unavailable",
-            None
+            None,
         )
-    )
+)
 
     monkeypatch.setenv("PRODUCT_SEARCH_BACKEND", "opensearch")
     monkeypatch.setattr(catalog, "list_products", postgres_search)
@@ -63,7 +67,6 @@ def test_list_catalog_falls_back_to_postgres_on_opensearch_connection_error(
 
 
 def test_list_catalog_reraises_non_transient_opensearch_error(monkeypatch):
-    from opensearchpy.exceptions import TransportError
 
     opensearch_search = Mock(
         side_effect=TransportError(
