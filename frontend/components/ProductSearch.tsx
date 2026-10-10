@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { getProducts, type Product } from "@/lib/api";
 
 type Props = {
@@ -8,45 +8,59 @@ type Props = {
   onSelect: (product: Product) => void;
 };
 
+type SearchState = {
+  query: string;
+  items: Product[];
+  status: "loading" | "success" | "error";
+};
+
 export default function ProductSearch({
   selectedProductId,
   onSelect,
 }: Props) {
+  const inputId = useId();
   const [query, setQuery] = useState("");
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [state, setState] = useState<SearchState | null>(null);
+  const [retry, setRetry] = useState(0);
+
+  const trimmedQuery = query.trim();
+  const current = state?.query === trimmedQuery ? state : null;
+  const loading =
+    trimmedQuery.length > 0 &&
+    (!current || current.status === "loading");
 
   useEffect(() => {
-    const trimmedQuery = query.trim();
-
     if (!trimmedQuery) {
-      setProducts([]);
-      setLoading(false);
+      setState(null);
       return;
     }
 
     let cancelled = false;
 
-    const timer = window.setTimeout(async () => {
-      setLoading(true);
+    setState({
+      query: trimmedQuery,
+      items: [],
+      status: "loading",
+    });
 
+    const timer = window.setTimeout(async () => {
       try {
-        const result = await getProducts(
-          undefined,
-          trimmedQuery,
-          8,
-        );
+        const result = await getProducts(undefined, trimmedQuery, 8);
 
         if (!cancelled) {
-          setProducts(result.items);
+          setState({
+            query: trimmedQuery,
+            items: result.items,
+            status: "success",
+          });
         }
       } catch {
         if (!cancelled) {
-          setProducts([]);
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
+          setState({
+            query: trimmedQuery,
+            items: [],
+            status: "error",
+          });
         }
       }
     }, 300);
@@ -55,73 +69,111 @@ export default function ProductSearch({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [query]);
-
-  const hasQuery = query.trim().length > 0;
+  }, [trimmedQuery, retry]);
 
   return (
-    <section className="rounded-sm border border-line bg-white">
-      <div className="border-b border-line px-5 py-3">
-        <p className="font-display text-xs italic text-ink/60">
+    <section
+      className="bb-card"
+      aria-labelledby={`${inputId}-heading`}
+    >
+      <div className="bb-section-heading">
+        <h2
+          id={`${inputId}-heading`}
+          className="bb-section-title"
+        >
           choose a product
-        </p>
+        </h2>
+        <span className="bb-micro">Your catalog</span>
       </div>
 
-      <div className="px-5 py-4">
+      <div className="bb-search-field">
+        <span aria-hidden="true">⌕</span>
+        <label className="bb-sr-only" htmlFor={inputId}>
+          Search your grocery catalog
+        </label>
         <input
+          id={inputId}
+          type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search your grocery catalog…"
-          className="w-full border-b border-line bg-transparent py-2 text-sm outline-none placeholder:text-ink/30 focus:border-savings"
+          autoComplete="off"
         />
+      </div>
 
-        {loading && (
-          <p className="mt-4 text-sm text-ink/40">
-            searching…
+      <div aria-live="polite" aria-busy={loading}>
+        {!trimmedQuery && (
+          <p className="bb-empty">
+            Search by product name to compare your options.
           </p>
         )}
 
-        {!loading && hasQuery && products.length === 0 && (
-          <p className="mt-4 text-sm text-ink/40">
-            No matching products.
-          </p>
+        {loading && <p className="bb-empty">Searching…</p>}
+
+        {current?.status === "error" && (
+          <div className="bb-empty">
+            <p role="alert">Couldn't load products.</p>
+            <button
+              className="bb-text-button"
+              type="button"
+              onClick={() => setRetry((value) => value + 1)}
+            >
+              Try again
+            </button>
+          </div>
         )}
 
-        {!loading && products.length > 0 && (
-          <ul className="mt-3 divide-y divide-line">
-            {products.map((product) => (
-              <li key={product.id}>
-                <button
-                  type="button"
-                  onClick={() => onSelect(product)}
-                  className={`w-full py-3 text-left transition ${
-                    selectedProductId === product.id
-                      ? "text-savings"
-                      : "text-ink"
-                  }`}
-                >
-                  <div className="flex items-baseline justify-between gap-4">
-                    <span className="text-sm">
-                      {product.name}
+        {current?.status === "success" &&
+          current.items.length === 0 && (
+            <p className="bb-empty">No matching products.</p>
+          )}
+      </div>
+
+      {current?.status === "success" &&
+        current.items.length > 0 && (
+          <ul className="bb-product-list">
+            {current.items.map((product) => {
+              const selected = selectedProductId === product.id;
+
+              return (
+                <li key={product.id}>
+                  <button
+                    className={`bb-product-option${selected ? " is-selected" : ""}`}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => onSelect(product)}
+                  >
+                    <span
+                      className="bb-selection-dot"
+                      aria-hidden="true"
+                    >
+                      {selected ? "✓" : ""}
                     </span>
 
-                    <span className="shrink-0 font-mono text-sm">
+                    <span className="bb-product-copy">
+                      <span className="bb-product-name">
+                        {product.name}
+                      </span>
+                      <span className="bb-product-detail">
+                        {[
+                          product.brand,
+                          product.sub_category,
+                          product.package_size,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
+                    </span>
+
+                    <span className="bb-price bb-green">
                       ${product.unit_price.toFixed(2)}
                     </span>
-                  </div>
-
-                  <p className="mt-0.5 text-xs text-ink/40">
-                    {product.brand}
-                    {product.sub_category
-                      ? ` · ${product.sub_category}`
-                      : ""}
-                  </p>
-                </button>
-              </li>
-            ))}
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         )}
-      </div>
     </section>
   );
 }

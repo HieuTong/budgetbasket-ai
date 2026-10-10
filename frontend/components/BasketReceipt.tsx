@@ -11,132 +11,93 @@ export default function BasketReceipt({
   loading,
   budget,
 }: Props) {
-  const remaining = basket
-    ? Math.max(0, budget - basket.total_cost)
-    : 0;
+  const remaining = basket ? budget - basket.total_cost : 0;
+  const itemCount =
+    basket?.items.reduce((sum, item) => sum + item.qty, 0) ?? 0;
 
   return (
-    <div className="torn-top bg-white shadow-sm ring-1 ring-line/60">
-      <div className="px-6 pt-6 pb-5">
-        <div className="flex items-baseline justify-between">
-          <p className="font-display text-xs italic text-ink/50">
-            your basket
-          </p>
-
+    <section className="bb-receipt-shell" aria-label="Your basket">
+      <div className="bb-receipt" aria-busy={loading}>
+        <div className="bb-section-heading">
+          <h2 className="bb-section-title">your basket</h2>
           {basket && (
-            <p className="font-mono text-xs text-ink/40">
+            <span className="bb-micro">
               {basket.items.length} products
-            </p>
+            </span>
           )}
         </div>
 
-        {loading && (
-          <div className="mt-4 space-y-3">
-            {[0, 1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="h-4 w-full animate-pulse rounded bg-savings-dim"
-              />
+        <div className="bb-receipt-meta">
+          <span>WEEKLY SHOP</span>
+          <span>{itemCount} items</span>
+        </div>
+
+        {loading ? (
+          <div className="bb-skeleton-group" role="status">
+            <span className="bb-sr-only">Optimizing your basket</span>
+            {[0, 1, 2, 3, 4, 5].map((item) => (
+              <div className="bb-skeleton" key={item} />
             ))}
           </div>
-        )}
+        ) : basket ? (
+          <>
+            {basket.items.length > 0 ? (
+              <ul className="bb-receipt-items">
+                {basket.items.map((item, index) => (
+                  <li
+                    className="bb-leader"
+                    key={`${item.name}-${index}`}
+                  >
+                    <span className="bb-item-name">
+                      <span className="bb-quantity">{item.qty} × </span>
+                      {item.name}
+                    </span>
+                    <span
+                      className="bb-leader-fill"
+                      aria-hidden="true"
+                    />
+                    <span className="bb-price">
+                      ${(item.qty * item.unit_price).toFixed(2)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="bb-empty">
+                No products were returned for this budget.
+              </p>
+            )}
 
-        {!loading && !basket && (
-          <p className="mt-4 text-sm text-ink/50">
+            <dl className="bb-receipt-totals">
+              <div className="bb-total-row">
+                <dt>Total</dt>
+                <dd>${basket.total_cost.toFixed(2)}</dd>
+              </div>
+              <div>
+                <dt>Budget</dt>
+                <dd>${budget.toFixed(2)}</dd>
+              </div>
+              <div
+                className={remaining < 0 ? "bb-negative" : "bb-green"}
+              >
+                <dt>{remaining < 0 ? "Over budget" : "Remaining"}</dt>
+                <dd>${Math.abs(remaining).toFixed(2)}</dd>
+              </div>
+            </dl>
+
+            <div className="bb-utility">
+              <span>Basket utility</span>
+              <span className="bb-mono">
+                {basket.total_utility.toFixed(2)}
+              </span>
+            </div>
+          </>
+        ) : (
+          <p className="bb-empty">
             Set a budget and optimize your basket.
           </p>
         )}
-
-        {!loading && basket && (
-          <>
-            <ul className="mt-4 space-y-2.5">
-              {basket.items.map((item) => (
-                <li
-                  key={item.name}
-                  className="leader font-mono text-sm"
-                >
-                  <span className="font-sans">
-                    {item.qty}× {item.name}
-                  </span>
-
-                  <span
-                    className="fill"
-                    aria-hidden
-                  />
-
-                  <span>
-                    ${(item.qty * item.unit_price).toFixed(2)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-
-            <div className="mt-5 border-t border-dashed border-line pt-3">
-              <div className="leader font-mono text-base font-medium">
-                <span className="font-sans">
-                  Total
-                </span>
-
-                <span
-                  className="fill"
-                  aria-hidden
-                />
-
-                <span className="text-savings">
-                  ${basket.total_cost.toFixed(2)}
-                </span>
-              </div>
-
-              <div className="leader mt-2 font-mono text-xs text-ink/50">
-                <span className="font-sans">
-                  Budget
-                </span>
-
-                <span
-                  className="fill"
-                  aria-hidden
-                />
-
-                <span>
-                  ${budget.toFixed(2)}
-                </span>
-              </div>
-
-              <div className="leader mt-1 font-mono text-xs text-ink/50">
-                <span className="font-sans">
-                  Remaining
-                </span>
-
-                <span
-                  className="fill"
-                  aria-hidden
-                />
-
-                <span>
-                  ${remaining.toFixed(2)}
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-4 border-t border-line pt-3">
-              <div className="leader font-mono text-xs">
-                <span className="font-sans text-ink/60">
-                  Basket utility
-                </span>
-
-                <span
-                  className="fill"
-                  aria-hidden
-                />
-
-                <span className="text-ink">
-                  {basket.total_utility.toFixed(2)}
-                </span>
-              </div>
-            </div>
-          </>
-        )}
       </div>
-    </div>
+    </section>
   );
 }

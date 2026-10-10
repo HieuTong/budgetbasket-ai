@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import {
   getSubstitutes,
-  type Substitute,
   type SubstitutesResponse,
 } from "@/lib/api";
 
@@ -12,126 +11,151 @@ type Props = {
   userId?: number;
 };
 
+type RequestState = {
+  productId: number;
+  userId: number | undefined;
+  status: "loading" | "success" | "error";
+  data: SubstitutesResponse | null;
+};
+
 export default function SubstituteCard({
   productId,
   userId,
 }: Props) {
-  const [data, setData] = useState<SubstitutesResponse | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [state, setState] = useState<RequestState | null>(null);
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
     if (productId === null) {
-      setData(null);
+      setState(null);
       return;
     }
 
-    const selectedProductId = productId;
     let cancelled = false;
+    const id = productId;
 
-    async function loadSubstitutes() {
-      setLoading(true);
+    setState({
+      productId: id,
+      userId,
+      status: "loading",
+      data: null,
+    });
 
-      try {
-        const result = await getSubstitutes(
-          selectedProductId,
-          userId,
-          3,
-        );
-
+    getSubstitutes(id, userId, 3)
+      .then((data) => {
         if (!cancelled) {
-          setData(result);
+          setState({
+            productId: id,
+            userId,
+            status: "success",
+            data,
+          });
         }
-      } catch {
+      })
+      .catch(() => {
         if (!cancelled) {
-          setData(null);
+          setState({
+            productId: id,
+            userId,
+            status: "error",
+            data: null,
+          });
         }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    }
-
-    loadSubstitutes();
+      });
 
     return () => {
       cancelled = true;
     };
-  }, [productId, userId]);
+  }, [productId, userId, retry]);
 
-  if (productId === null) {
-    return null;
-  }
+  if (productId === null) return null;
+
+  const current =
+    state?.productId === productId && state.userId === userId
+      ? state
+      : null;
+
+  const loading = !current || current.status === "loading";
+  const data = current?.data;
 
   return (
-    <section className="rounded-sm bg-savings-dim">
-      <div className="border-b border-line px-5 py-3">
-        <p className="font-display text-xs italic text-ink/60">
-          cheaper alternatives
-        </p>
+    <section
+      className="bb-card bb-alternatives"
+      aria-label="Cheaper alternatives"
+      aria-busy={loading}
+    >
+      <div className="bb-section-heading">
+        <h2 className="bb-section-title">cheaper alternatives</h2>
+        {data && (
+          <span className="bb-micro bb-green">
+            vs. ${data.base_price.toFixed(2)}
+          </span>
+        )}
       </div>
 
-      <div className="px-5 py-4">
-        {loading && (
-          <div className="space-y-3">
-            {[0, 1, 2].map((item) => (
-              <div
-                key={item}
-                className="h-12 animate-pulse rounded bg-white/60"
-              />
-            ))}
-          </div>
-        )}
-
-        {!loading && !data && (
-          <p className="text-sm text-ink/50">
-            Alternatives unavailable.
-          </p>
-        )}
-
-        {!loading && data && data.results.length === 0 && (
-          <p className="text-sm text-ink/50">
-            No cheaper alternatives found.
-          </p>
-        )}
-
-        {!loading && data && data.results.length > 0 && (
-          <ul className="divide-y divide-line">
-            {data.results.map((item: Substitute) => (
-              <li
-                key={item.product_id}
-                className="py-3 first:pt-0 last:pb-0"
-              >
-                <div className="flex items-baseline justify-between gap-4">
-                  <div>
-                    <p className="text-sm text-ink">
+      {loading ? (
+        <div className="bb-skeleton-group" role="status">
+          <span className="bb-sr-only">Loading alternatives</span>
+          {[0, 1, 2].map((item) => (
+            <div key={item} className="bb-skeleton" />
+          ))}
+        </div>
+      ) : current?.status === "error" || !data ? (
+        <div className="bb-empty">
+          <p role="alert">Alternatives unavailable.</p>
+          <button
+            className="bb-text-button"
+            type="button"
+            onClick={() => setRetry((value) => value + 1)}
+          >
+            Try again
+          </button>
+        </div>
+      ) : data.results.length === 0 ? (
+        <p className="bb-empty">No cheaper alternatives found.</p>
+      ) : (
+        <>
+          <ul className="bb-substitute-list">
+            {data.results.map((item, index) => (
+              <li key={item.product_id}>
+                <div className="bb-substitute-row">
+                  <div className="bb-substitute-copy">
+                    <h3>
                       {item.product_name}
-                    </p>
-
-                    <p className="mt-0.5 text-xs text-ink/40">
-                      {item.brand}
-                    </p>
+                      {index === 0 && (
+                        <span className="bb-best-value">
+                          TOP MATCH
+                        </span>
+                      )}
+                    </h3>
+                    <p className="bb-product-detail">{item.brand}</p>
                   </div>
 
-                  <p className="shrink-0 font-mono text-sm">
-                    ${item.unit_price.toFixed(2)}
+                  <div className="bb-substitute-pricing">
+                    <p className="bb-price">
+                      ${item.unit_price.toFixed(2)}
+                    </p>
+                    <p className="bb-savings">
+                      save ${item.savings.toFixed(2)} ·{" "}
+                      {item.savings_percent.toFixed(0)}% less
+                    </p>
+                  </div>
+                </div>
+
+                {item.reason && (
+                  <p className="bb-substitute-reason">
+                    {item.reason}
                   </p>
-                </div>
-
-                <div className="mt-1 flex gap-3 font-mono text-xs text-savings">
-                  <span>
-                    save ${item.savings.toFixed(2)}
-                  </span>
-
-                  <span>
-                    {item.savings_percent.toFixed(0)}% less
-                  </span>
-                </div>
+                )}
               </li>
             ))}
           </ul>
-        )}
-      </div>
+
+          <p className="bb-card-footnote">
+            Savings shown per unit. Your basket is unchanged.
+          </p>
+        </>
+      )}
     </section>
   );
 }

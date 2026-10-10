@@ -116,25 +116,27 @@ export async function getProducts(
   const data = await res.json();
 
   return {
-    items: data.items.map((item: {
-      product_id: number;
-      name: string;
-      brand: string;
-      category: string;
-      sub_category?: string;
-      product_group?: string;
-      package_size?: string;
-      price: number;
-    }) => ({
-      id: item.product_id,
-      name: item.name,
-      brand: item.brand,
-      category: item.category,
-      sub_category: item.sub_category,
-      product_group: item.product_group,
-      package_size: item.package_size,
-      unit_price: item.price,
-    })),
+    items: data.items.map(
+      (item: {
+        product_id: number;
+        name: string;
+        brand: string;
+        category: string;
+        sub_category?: string;
+        product_group?: string;
+        package_size?: string;
+        price: number;
+      }) => ({
+        id: item.product_id,
+        name: item.name,
+        brand: item.brand,
+        category: item.category,
+        sub_category: item.sub_category,
+        product_group: item.product_group,
+        package_size: item.package_size,
+        unit_price: item.price,
+      }),
+    ),
   };
 }
 
