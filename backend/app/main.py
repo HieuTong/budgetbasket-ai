@@ -1,4 +1,6 @@
 import logging
+import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,15 +18,33 @@ from app.api.routes import (
 from app.api.routes.purchase_profile import router as purchase_profile_router
 from app.core.config import settings
 from app.db.session import engine
+from app.services.opensearch_catalog import create_client
 
 
 logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Own one OpenSearch client for the application lifetime when enabled."""
+    app.state.opensearch_client = None
+    backend = os.getenv("PRODUCT_SEARCH_BACKEND", "legacy").strip().lower()
+    try:
+        if backend == "opensearch":
+            app.state.opensearch_client = create_client()
+        yield
+    finally:
+        client = app.state.opensearch_client
+        app.state.opensearch_client = None
+        if client is not None:
+            client.close()
 
 
 app = FastAPI(
     title="BudgetBasket AI",
     description="Cost-of-living optimizer: ML + RAG + Agentic AI over your purchase history and budget.",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
