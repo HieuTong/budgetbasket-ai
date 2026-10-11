@@ -80,25 +80,47 @@ def search_product_ids(
     """
     index = os.getenv("OPENSEARCH_PRODUCT_INDEX", "budgetbasket-products-v1")
 
-    filters = []
+    # Customer-facing grocery search should use the Australian catalog.
+    # Historical Dunnhumby records remain in PostgreSQL for ML and analytics.
+    customer_source = os.getenv(
+        "OPENSEARCH_PRODUCT_SOURCE",
+        "kaggle_australia_grocery_2022",
+    )
+    filters = [{"term": {"source": customer_source}}]
+
     if category and category.strip():
         filters.append({"term": {"category.keyword": category.strip()}})
 
     query_text = (search or "").strip()
 
     if query_text:
+        # Avoid fuzzy expansion for short grocery terms.
+        terms = query_text.split()
+        allow_fuzzy = any(len(term) >= 5 for term in terms)
+
+        product_match = {
+            "multi_match": {
+                "query": query_text,
+                "type": "best_fields",
+                "operator": "and",
+                "fields": ["name^5", "brand^2"],
+            }
+        }
+        if allow_fuzzy:
+            product_match["multi_match"]["fuzziness"] = "AUTO"
+
         query = {
             "bool": {
                 "should": [
                     {
-                        "multi_match": {
-                            "query": query_text,
-                            "type": "best_fields",
-                            "fuzziness": "AUTO",
-                            "operator": "and",
-                            "fields": ["name^5", "brand^2"],
+                        "match_phrase": {
+                            "name": {
+                                "query": query_text,
+                                "boost": 20,
+                            }
                         }
                     },
+                    product_match,
                     {
                         "multi_match": {
                             "query": query_text,
@@ -106,9 +128,9 @@ def search_product_ids(
                             "fuzziness": "AUTO",
                             "operator": "and",
                             "fields": [
-                                "sub_category^0.2",
-                                "product_group^0.1",
-                                "category^0.05",
+                                "sub_category^5",
+                                "product_group^2",
+                                "category^1",
                             ],
                         }
                     },

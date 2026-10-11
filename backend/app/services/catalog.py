@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.db.repositories.prices import get_latest_prices_for_products
 from app.db.repositories.products import get_products_by_ids_ordered, list_products
+from app.services.grocery_ranking import rerank_grocery_products
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +81,8 @@ def list_catalog(
             )
         else:
             products = get_products_by_ids_ordered(db, product_ids)
+            if search:
+                products = rerank_grocery_products(products, search)
 
     else:
         raise RuntimeError(
