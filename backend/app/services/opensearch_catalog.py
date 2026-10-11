@@ -4,9 +4,6 @@ from __future__ import annotations
 import os
 from urllib.parse import urlparse
 
-from app.core import config as _config
-from app.core.config import BACKEND_DIR
-
 
 def create_client():
     """Create an OpenSearch client; callers own its lifecycle."""
