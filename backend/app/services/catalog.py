@@ -14,6 +14,7 @@ def list_catalog(
     category: str | None = None,
     search: str | None = None,
     limit: int | None = None,
+    opensearch_client=None,
 ) -> list[dict]:
     backend = os.getenv("PRODUCT_SEARCH_BACKEND", "legacy").strip().lower()
     if backend == "legacy":
@@ -37,6 +38,7 @@ def list_catalog(
                 search=search,
                 category=category,
                 limit=limit if limit is not None else 100,
+                client=opensearch_client,
             )
         except (OpenSearchConnectionError, ConnectionTimeout) as exc:
             logger.warning(
