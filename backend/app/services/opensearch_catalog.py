@@ -7,7 +7,7 @@ from urllib.parse import urlparse
 
 
 def create_client():
-    """Create an OpenSearch client. The caller owns its lifecycle."""
+    """Create an OpenSearch client; callers own its lifecycle."""
     try:
         from opensearchpy import OpenSearch
     except ImportError as exc:
@@ -153,7 +153,6 @@ def search_product_ids(
             }
         }
         sort = [{"product_id": {"order": "asc"}}]
-
 
     owns_client = client is None
     if owns_client:

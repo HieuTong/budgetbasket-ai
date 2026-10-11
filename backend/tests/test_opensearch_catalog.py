@@ -1,3 +1,7 @@
+import asyncio
+
+from fastapi import FastAPI
+
 from app.services import opensearch_catalog
 
 
@@ -66,6 +70,7 @@ def test_search_product_ids_returns_ranked_ids_and_boosts_name():
 
     # The caller owns an injected client.
     assert client.closed is False
+
 
 def test_search_product_ids_empty_query_uses_stable_id_order():
     client = FakeClient(
@@ -173,3 +178,48 @@ def test_search_product_ids_creates_and_closes_standalone_client(monkeypatch):
     assert result == [8]
     assert created_clients == [client]
     assert client.closed is True
+
+
+def test_owned_client_is_closed_when_search_fails(monkeypatch):
+    class FailingClient(FakeClient):
+        def search(self, **kwargs):
+            raise RuntimeError("search failed")
+
+    client = FailingClient({"hits": {"hits": []}})
+    monkeypatch.setattr(
+        opensearch_catalog,
+        "create_client",
+        lambda: client,
+    )
+
+    try:
+        opensearch_catalog.search_product_ids(
+            search="milk",
+            category=None,
+            limit=5,
+        )
+    except RuntimeError as exc:
+        assert str(exc) == "search failed"
+    else:
+        raise AssertionError("Expected the search error to propagate")
+
+    assert client.closed
+
+
+def test_fastapi_lifespan_creates_and_closes_shared_client(monkeypatch):
+    from app import main
+
+    client = FakeClient({"hits": {"hits": []}})
+    monkeypatch.setenv("PRODUCT_SEARCH_BACKEND", "opensearch")
+    monkeypatch.setattr(main, "create_client", lambda: client)
+    app = FastAPI()
+
+    async def exercise_lifespan():
+        async with main.lifespan(app):
+            assert app.state.opensearch_client is client
+            assert not client.closed
+
+        assert app.state.opensearch_client is None
+        assert client.closed
+
+    asyncio.run(exercise_lifespan())

@@ -18,6 +18,7 @@ from app.api.routes import (
 from app.api.routes.purchase_profile import router as purchase_profile_router
 from app.core.config import settings
 from app.db.session import engine
+from app.services.opensearch_catalog import create_client
 
 logger = logging.getLogger(__name__)
 
@@ -26,24 +27,22 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Manage the shared OpenSearch client for the application lifecycle."""
     backend = os.getenv("PRODUCT_SEARCH_BACKEND", "legacy").strip().lower()
-    client = None
+    app.state.opensearch_client = None
 
-    if backend == "opensearch":
-        # Import lazily so legacy mode does not require opensearch-py.
-        from app.services.opensearch_catalog import create_client
-
-        client = create_client()
-        app.state.opensearch_client = client
-    elif backend == "legacy":
-        app.state.opensearch_client = None
-    else:
+    if backend not in {"legacy", "opensearch"}:
         raise RuntimeError(
             "Unsupported PRODUCT_SEARCH_BACKEND. Use 'legacy' or 'opensearch'."
         )
 
     try:
+        if backend == "opensearch":
+            app.state.opensearch_client = create_client()
+
         yield
     finally:
+        client = app.state.opensearch_client
+        app.state.opensearch_client = None
+
         if client is not None:
             try:
                 client.close()
@@ -68,6 +67,26 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
+@app.get("/ready")
+def readiness():
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+    except Exception as exc:
+        logger.exception("Database readiness check failed")
+        raise HTTPException(
+            status_code=503,
+            detail="database_unavailable",
+        ) from exc
+
+    return {"status": "ready"}
+
 
 app.include_router(catalog.router)
 app.include_router(purchases.router)

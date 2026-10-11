@@ -27,11 +27,9 @@ def test_opensearch_client_is_shared_with_route_and_closed_on_shutdown(
         return client
 
     monkeypatch.setattr(
-        opensearch_catalog,
-        "create_client",
+        "app.main.create_client",
         fake_create_client,
     )
-
     received = {}
 
     def fake_list_catalog(
