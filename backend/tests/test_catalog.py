@@ -57,7 +57,7 @@ def test_list_catalog_falls_back_to_postgres_on_opensearch_connection_error(
     opensearch_search.assert_called_once_with(
         search="Greek yoghurt",
         category="Dairy",
-        limit=10,
+        limit=40,
         client=None,
     )
     postgres_search.assert_called_once_with(

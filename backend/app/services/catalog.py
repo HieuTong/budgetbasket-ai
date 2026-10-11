@@ -36,11 +36,16 @@ def list_catalog(
 
         from app.services.opensearch_catalog import search_product_ids
 
+        # Retrieve a wider candidate pool so intent reranking can promote
+        # relevant products that would otherwise fall outside the requested top-k.
+        requested_limit = limit
+        candidate_limit = max(limit * 4, 20) if limit is not None else 100
+
         try:
             product_ids = search_product_ids(
                 search=search,
                 category=category,
-                limit=limit if limit is not None else 100,
+                limit=candidate_limit,
                 client=opensearch_client,
             )
         except (OpenSearchConnectionError, ConnectionTimeout) as exc:
@@ -83,6 +88,8 @@ def list_catalog(
             products = get_products_by_ids_ordered(db, product_ids)
             if search:
                 products = rerank_grocery_products(products, search)
+            if requested_limit is not None:
+                products = products[:requested_limit]
 
     else:
         raise RuntimeError(

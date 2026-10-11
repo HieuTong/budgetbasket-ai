@@ -109,9 +109,7 @@ def search_product_ids(
         if allow_fuzzy:
             product_match["multi_match"]["fuzziness"] = "AUTO"
 
-        query = {
-            "bool": {
-                "should": [
+        should_clauses = [
                     {
                         "match_phrase": {
                             "name": {
@@ -158,7 +156,24 @@ def search_product_ids(
                             }
                         }
                     },
-                ],
+                ]
+
+        # For a broad chicken query, prioritize poultry over flavoured snacks.
+        if query_text.lower() in {"chicken", "chiken"}:
+            should_clauses.append(
+                {
+                    "term": {
+                        "sub_category.keyword": {
+                            "value": "Poultry",
+                            "boost": 50,
+                        }
+                    }
+                }
+            )
+
+        query = {
+            "bool": {
+                "should": should_clauses,
                 "minimum_should_match": 1,
                 "filter": filters,
             }
