@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
 from app.db.repositories.prices import list_product_prices
@@ -11,6 +11,7 @@ router = APIRouter()
 
 @router.get("/products")
 def products(
+    request: Request,
     category: str | None = Query(default=None),
     search: str | None = Query(default=None),
     limit: int = Query(default=20, ge=1, le=100),
@@ -22,6 +23,11 @@ def products(
             category=category,
             search=search,
             limit=limit,
+            opensearch_client=getattr(
+                request.app.state,
+                "opensearch_client",
+                None,
+            ),
         )
     }
 
