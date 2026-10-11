@@ -24,7 +24,7 @@ def test_search_product_ids_returns_ranked_ids_and_boosts_name(monkeypatch):
             ]
         }
     })
-    monkeypatch.setattr(opensearch_catalog, "_client", lambda: client)
+    monkeypatch.setattr(opensearch_catalog, "create_client", lambda: client)
 
     result = opensearch_catalog.search_product_ids(
         search="Greek yoghurt",
@@ -48,9 +48,13 @@ def test_search_product_ids_empty_query_uses_stable_id_order(monkeypatch):
     client = FakeClient({
         "hits": {"hits": [{"_source": {"product_id": 2}}, {"_source": {"product_id": 9}}]}
     })
-    monkeypatch.setattr(opensearch_catalog, "_client", lambda: client)
+    monkeypatch.setattr(opensearch_catalog, "create_client", lambda: client)
 
-    result = opensearch_catalog.search_product_ids(search="  ", category=None, limit=20)
+    result = opensearch_catalog.search_product_ids(
+        search="  ",
+        category=None,
+        limit=20,
+    )
 
     assert result == [2, 9]
     assert client.calls[0]["body"]["sort"] == [{"product_id": {"order": "asc"}}]
@@ -58,8 +62,58 @@ def test_search_product_ids_empty_query_uses_stable_id_order(monkeypatch):
 
 def test_search_product_ids_ignores_hits_without_product_id(monkeypatch):
     client = FakeClient({
-        "hits": {"hits": [{ "_source": {} }, {"_source": {"product_id": 3}}]}
+        "hits": {"hits": [{"_source": {}}, {"_source": {"product_id": 3}}]}
     })
-    monkeypatch.setattr(opensearch_catalog, "_client", lambda: client)
+    monkeypatch.setattr(opensearch_catalog, "create_client", lambda: client)
 
-    assert opensearch_catalog.search_product_ids(search="milk", category=None, limit=5) == [3]
+    assert opensearch_catalog.search_product_ids(
+        search="milk",
+        category=None,
+        limit=5,
+    ) == [3]
+
+
+def test_injected_client_is_reused_without_closing():
+    client = FakeClient({
+        "hits": {"hits": [{"_source": {"product_id": 11}}]}
+    })
+
+    first = opensearch_catalog.search_product_ids(
+        search="milk",
+        category=None,
+        limit=5,
+        client=client,
+    )
+    second = opensearch_catalog.search_product_ids(
+        search="eggs",
+        category=None,
+        limit=5,
+        client=client,
+    )
+
+    assert first == [11]
+    assert second == [11]
+    assert len(client.calls) == 2
+    assert not client.closed
+
+
+def test_owned_client_is_closed_when_search_fails(monkeypatch):
+    class FailingClient(FakeClient):
+        def search(self, **kwargs):
+            raise RuntimeError("search failed")
+
+    client = FailingClient({"hits": {"hits": []}})
+    monkeypatch.setattr(opensearch_catalog, "create_client", lambda: client)
+
+    try:
+        opensearch_catalog.search_product_ids(
+            search="milk",
+            category=None,
+            limit=5,
+        )
+    except RuntimeError as exc:
+        assert str(exc) == "search failed"
+    else:
+        raise AssertionError("Expected the search error to propagate")
+
+    assert client.closed
