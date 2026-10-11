@@ -8,7 +8,14 @@ type Props = {
   userId?: number;
 };
 
-const DECISION_LABELS: Record<string, string> = {
+type RequestState = {
+  productId: number;
+  userId: number | undefined;
+  status: "loading" | "success" | "error";
+  data: DecisionResponse | null;
+};
+
+const LABELS: Record<string, string> = {
   BUY: "BUY",
   WAIT: "WAIT",
   SUBSTITUTE: "SUBSTITUTE",
@@ -19,132 +26,148 @@ export default function DecisionCard({
   productId,
   userId,
 }: Props) {
-  const [decision, setDecision] = useState<DecisionResponse | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [state, setState] = useState<RequestState | null>(null);
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
     if (productId === null) {
-      setDecision(null);
+      setState(null);
       return;
     }
 
-    const selectedProductId = productId;
     let cancelled = false;
+    const id = productId;
 
-    async function loadDecision() {
-      setLoading(true);
+    setState({
+      productId: id,
+      userId,
+      status: "loading",
+      data: null,
+    });
 
-      try {
-        const result = await getDecision(
-          selectedProductId,
-          userId,
-        );
-
+    getDecision(id, userId)
+      .then((data) => {
         if (!cancelled) {
-          setDecision(result);
+          setState({
+            productId: id,
+            userId,
+            status: "success",
+            data,
+          });
         }
-      } catch {
+      })
+      .catch(() => {
         if (!cancelled) {
-          setDecision(null);
+          setState({
+            productId: id,
+            userId,
+            status: "error",
+            data: null,
+          });
         }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    }
-
-    loadDecision();
+      });
 
     return () => {
       cancelled = true;
     };
-  }, [productId, userId]);
+  }, [productId, userId, retry]);
 
-  if (productId === null) {
-    return null;
-  }
+  if (productId === null) return null;
+
+  const current =
+    state?.productId === productId && state.userId === userId
+      ? state
+      : null;
+
+  const loading = !current || current.status === "loading";
+  const decision = current?.data;
+  const probabilities = decision?.price_probability;
 
   return (
-    <section className="rounded-sm border border-line bg-white">
-      <div className="border-b border-line px-5 py-3">
-        <p className="font-display text-xs italic text-ink/60">
-          product decision
-        </p>
+    <section
+      className="bb-card"
+      aria-label="Product decision"
+      aria-busy={loading}
+    >
+      <div className="bb-section-heading">
+        <h2 className="bb-section-title">product decision</h2>
+        <span className="bb-green" aria-hidden="true">✧</span>
       </div>
 
-      <div className="px-5 py-5">
-        {loading && (
-          <div className="space-y-3">
-            <div className="h-5 w-2/3 animate-pulse rounded bg-savings-dim" />
-            <div className="h-4 w-1/3 animate-pulse rounded bg-savings-dim" />
-            <div className="h-4 w-full animate-pulse rounded bg-savings-dim" />
-          </div>
-        )}
+      {loading ? (
+        <div className="bb-skeleton-group" role="status">
+          <span className="bb-sr-only">Loading recommendation</span>
+          <div className="bb-skeleton bb-skeleton-short" />
+          <div className="bb-skeleton" />
+          <div className="bb-skeleton" />
+        </div>
+      ) : current?.status === "error" || !decision ? (
+        <div className="bb-empty">
+          <p role="alert">Decision unavailable.</p>
+          <button
+            type="button"
+            className="bb-text-button"
+            onClick={() => setRetry((value) => value + 1)}
+          >
+            Try again
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="bb-decision-head">
+            <h3 className="bb-product-title">
+              {decision.product_name}
+            </h3>
 
-        {!loading && !decision && (
-          <p className="text-sm text-ink/50">
-            Decision unavailable.
-          </p>
-        )}
-
-        {!loading && decision && (
-          <>
-            <div className="flex items-baseline justify-between gap-4">
-              <h2 className="font-display text-xl text-ink">
-                {decision.product_name}
-              </h2>
-
-              <span className="font-mono text-sm text-savings">
-                {DECISION_LABELS[decision.decision] ?? decision.decision}
+            <div className="bb-decision-status">
+              <span className="bb-badge">
+                {LABELS[decision.decision] ?? decision.decision}
               </span>
+
+              {decision.confidence > 0 && (
+                <span className="bb-micro">
+                  {(decision.confidence * 100).toFixed(0)}% confidence
+                </span>
+              )}
             </div>
+          </div>
 
-            {decision.confidence > 0 && (
-              <p className="mt-2 font-mono text-xs text-ink/50">
-                {(decision.confidence * 100).toFixed(0)}% confidence
-              </p>
-            )}
+          <p className="bb-decision-reason">{decision.reason}</p>
 
-            <div className="mt-4 border-t border-dashed border-line pt-4">
-              <p className="text-sm leading-6 text-ink/80">
-                {decision.reason}
-              </p>
-            </div>
-
-            {decision.price_probability && (
-              <div className="mt-4 border-t border-line pt-4">
-                <p className="font-display text-xs italic text-ink/50">
-                  price signal
-                </p>
-
-                <div className="mt-2 grid grid-cols-3 gap-3 font-mono text-xs">
-                  <div>
-                    <p className="text-ink/40">Increase</p>
-                    <p className="mt-1">
-                      {(decision.price_probability.INCREASE * 100).toFixed(0)}%
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-ink/40">Stable</p>
-                    <p className="mt-1">
-                      {(decision.price_probability.STABLE * 100).toFixed(0)}%
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-ink/40">Decrease</p>
-                    <p className="mt-1">
-                      {(decision.price_probability.DECREASE * 100).toFixed(0)}%
-                    </p>
-                  </div>
-                </div>
+          {probabilities && (
+            <div className="bb-price-signal">
+              <div className="bb-section-heading">
+                <h4 className="bb-section-title">price signal</h4>
               </div>
-            )}
-          </>
-        )}
-      </div>
+
+              <div className="bb-probability-grid">
+                {(
+                  [
+                    ["Increase", probabilities.INCREASE],
+                    ["Stable", probabilities.STABLE],
+                    ["Decrease", probabilities.DECREASE],
+                  ] as const
+                ).map(([label, probability]) => (
+                  <div key={label}>
+                    <div className="bb-probability-label">
+                      <span>{label}</span>
+                      <span className="bb-mono">
+                        {(probability * 100).toFixed(0)}%
+                      </span>
+                    </div>
+
+                    <progress
+                      max={1}
+                      value={probability}
+                      aria-label={`${label} probability`}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </section>
   );
 }

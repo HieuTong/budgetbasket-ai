@@ -1,29 +1,42 @@
 import type { Metadata } from "next";
-import { Fraunces, IBM_Plex_Mono } from "next/font/google";
+import {
+  IBM_Plex_Mono,
+  Instrument_Serif,
+  Inter,
+} from "next/font/google";
 import "./globals.css";
 
-const fraunces = Fraunces({
+const sans = Inter({
   subsets: ["latin"],
-  variable: "--font-fraunces",
-  weight: ["400", "500", "600"],
-  style: ["normal", "italic"],
+  variable: "--font-bb-sans",
 });
 
-const plexMono = IBM_Plex_Mono({
+const display = Instrument_Serif({
   subsets: ["latin"],
-  variable: "--font-plex-mono",
+  weight: "400",
+  style: ["normal", "italic"],
+  variable: "--font-bb-display",
+});
+
+const mono = IBM_Plex_Mono({
+  subsets: ["latin"],
   weight: ["400", "500"],
+  variable: "--font-bb-mono",
 });
 
 export const metadata: Metadata = {
-  title: "BudgetBasket — optimize what you already buy",
-  description: "A grocery budget optimizer for the Australian cost of living.",
+  title: "BudgetBasket",
+  description: "Good groceries. Better numbers.",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className={`${fraunces.variable} ${plexMono.variable} font-sans antialiased`}>
+      <body
+        className={`${sans.variable} ${display.variable} ${mono.variable}`}
+      >
         {children}
       </body>
     </html>

@@ -1,76 +1,206 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { askAgent } from "@/lib/api";
 
-type Message = { role: "user" | "agent"; text: string };
+type Message = {
+  id: number;
+  role: "user" | "agent";
+  text: string;
+  error?: boolean;
+};
+
+const SUGGESTIONS = [
+  "swap something to save $5",
+  "why is bread more expensive this week?",
+];
 
 export default function AgentChat({ userId }: { userId: number }) {
+  const inputId = useId();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
 
+  const conversationRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const pending = useRef(false);
+  const messageId = useRef(0);
+  const generation = useRef(0);
+
+  useEffect(() => {
+    generation.current += 1;
+    pending.current = false;
+    setMessages([]);
+    setInput("");
+    setSending(false);
+
+    return () => {
+      generation.current += 1;
+    };
+  }, [userId]);
+
+  useEffect(() => {
+    const element = conversationRef.current;
+    if (element) {
+      element.scrollTop = element.scrollHeight;
+    }
+  }, [messages, sending]);
+
   async function handleSend() {
-    if (!input.trim() || sending) return;
     const question = input.trim();
-    setMessages((m) => [...m, { role: "user", text: question }]);
+    if (!question || pending.current) return;
+
+    pending.current = true;
+    const requestGeneration = generation.current;
+
+    // Keep state updaters pure, including in React Strict Mode.
+    const userMessage: Message = {
+      id: ++messageId.current,
+      role: "user",
+      text: question,
+    };
+
+    setMessages((previous) => [...previous, userMessage]);
     setInput("");
     setSending(true);
+
     try {
       const { reply } = await askAgent(userId, question);
-      setMessages((m) => [...m, { role: "agent", text: reply }]);
+
+      if (generation.current !== requestGeneration) return;
+
+      const replyMessage: Message = {
+        id: ++messageId.current,
+        role: "agent",
+        text: reply,
+      };
+
+      setMessages((previous) => [...previous, replyMessage]);
     } catch {
-      setMessages((m) => [
-        ...m,
-        { role: "agent", text: "Couldn't reach the assistant — check the backend is running." },
-      ]);
+      if (generation.current !== requestGeneration) return;
+
+      const errorMessage: Message = {
+        id: ++messageId.current,
+        role: "agent",
+        error: true,
+        text: "Couldn't reach the assistant — check the backend is running.",
+      };
+
+      setMessages((previous) => [...previous, errorMessage]);
     } finally {
-      setSending(false);
+      if (generation.current === requestGeneration) {
+        pending.current = false;
+        setSending(false);
+      }
     }
   }
 
+  function selectSuggestion(question: string) {
+    setInput(question);
+    inputRef.current?.focus();
+  }
+
   return (
-    <div className="rounded-sm border border-line bg-white">
-      <div className="border-b border-line px-5 py-3">
-        <p className="font-display text-xs italic text-ink/60">ask the assistant</p>
+    <section className="bb-card bb-chat" aria-label="Ask the assistant">
+      <div className="bb-section-heading">
+        <h2 className="bb-section-title">ask the assistant</h2>
       </div>
 
-      <div className="max-h-64 space-y-3 overflow-y-auto px-5 py-4">
+      <p className="bb-chat-description">
+        A second opinion for your weekly shop.
+      </p>
+
+      <div
+        ref={conversationRef}
+        className="bb-conversation"
+        role="log"
+        aria-label="Assistant conversation"
+        aria-live="polite"
+        aria-relevant="additions text"
+      >
         {messages.length === 0 && (
-          <p className="text-sm text-ink/40">
-            Try: “swap something to save $5” or “why is bread more expensive this week?”
+          <p className="bb-empty">
+            Try: “swap something to save $5” or “why is bread more
+            expensive this week?”
           </p>
         )}
-        {messages.map((m, i) => (
-          <div key={i} className={m.role === "user" ? "text-right" : "text-left"}>
-            <span
-              className={`inline-block max-w-[85%] rounded-sm px-3 py-2 text-sm ${
-                m.role === "user" ? "bg-savings-dim text-ink" : "bg-paper text-ink/90"
-              }`}
+
+        {messages.map((message) => (
+          <div
+            key={message.id}
+            className={`bb-message bb-message-${message.role}`}
+          >
+            <p className="bb-message-label">
+              {message.role === "user" ? "YOU" : "BASKET ASSISTANT"}
+            </p>
+            <div
+              className={`bb-message-bubble${message.error ? " bb-message-error" : ""}`}
             >
-              {m.text}
-            </span>
+              {message.text}
+            </div>
           </div>
         ))}
-        {sending && <p className="text-sm text-ink/40">thinking…</p>}
+
+        {sending && (
+          <p className="bb-thinking" role="status">
+            Thinking…
+          </p>
+        )}
       </div>
 
-      <div className="flex items-center gap-2 border-t border-line px-4 py-3">
+      <div className="bb-suggestions">
+        <p className="bb-micro">TRY ASKING</p>
+        {SUGGESTIONS.map((question) => (
+          <button
+            key={question}
+            type="button"
+            disabled={sending}
+            onClick={() => selectSuggestion(question)}
+          >
+            <span>{question}</span>
+            <span aria-hidden="true">↗</span>
+          </button>
+        ))}
+      </div>
+
+      <form
+        className="bb-chat-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void handleSend();
+        }}
+      >
+        <label className="bb-sr-only" htmlFor={inputId}>
+          Ask about your basket
+        </label>
         <input
+          ref={inputRef}
+          id={inputId}
           value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSend()}
+          onChange={(event) => setInput(event.target.value)}
+          onKeyDown={(event) => {
+            if (
+              event.key === "Enter" &&
+              event.nativeEvent.isComposing
+            ) {
+              event.preventDefault();
+            }
+          }}
           placeholder="Ask about your basket…"
-          className="flex-1 bg-transparent text-sm outline-none placeholder:text-ink/30"
+          autoComplete="off"
         />
         <button
-          onClick={handleSend}
-          disabled={sending}
-          className="font-mono text-xs font-medium text-savings disabled:opacity-40"
+          className="bb-button"
+          type="submit"
+          disabled={sending || !input.trim()}
         >
           Send
         </button>
-      </div>
-    </div>
+      </form>
+
+      <p className="bb-card-footnote">
+        Suggestions only—your basket isn’t changed automatically.
+      </p>
+    </section>
   );
 }
