@@ -3,10 +3,13 @@ from __future__ import annotations
 
 import os
 from urllib.parse import urlparse
-from app.core.config import BACKEND_DIR
-from app.core import config as _config
 
-def _client():
+from app.core import config as _config
+from app.core.config import BACKEND_DIR
+
+
+def create_client():
+    """Create an OpenSearch client; callers own its lifecycle."""
     try:
         from opensearchpy import OpenSearch
     except ImportError as exc:
@@ -64,9 +67,17 @@ def _client():
 
 
 def search_product_ids(
-    *, search: str | None, category: str | None, limit: int
+    *,
+    search: str | None,
+    category: str | None,
+    limit: int,
+    client=None,
 ) -> list[int]:
-    """Return product IDs ranked by lexical relevance."""
+    """Return product IDs ranked by lexical relevance.
+
+    Pass a lifespan-managed client for connection reuse. If no client is
+    supplied, this function creates and closes a temporary client.
+    """
     index = os.getenv("OPENSEARCH_PRODUCT_INDEX", "budgetbasket-products-v1")
     filters = []
     if category and category.strip():
@@ -103,7 +114,10 @@ def search_product_ids(
         query = {"bool": {"filter": filters, "must": [{"match_all": {}}]}}
         sort = [{"product_id": {"order": "asc"}}]
 
-    client = _client()
+    owns_client = client is None
+    if owns_client:
+        client = create_client()
+
     try:
         response = client.search(
             index=index,
@@ -115,7 +129,8 @@ def search_product_ids(
             },
         )
     finally:
-        client.close()
+        if owns_client:
+            client.close()
 
     ids = []
     for hit in response.get("hits", {}).get("hits", []):
