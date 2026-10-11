@@ -14,8 +14,10 @@ def list_catalog(
     category: str | None = None,
     search: str | None = None,
     limit: int | None = None,
+    opensearch_client=None,
 ) -> list[dict]:
     backend = os.getenv("PRODUCT_SEARCH_BACKEND", "legacy").strip().lower()
+
     if backend == "legacy":
         products = list_products(
             db,
@@ -23,6 +25,7 @@ def list_catalog(
             search=search,
             limit=limit,
         )
+
     elif backend == "opensearch":
         from opensearchpy.exceptions import (
             ConnectionError as OpenSearchConnectionError,
@@ -37,10 +40,12 @@ def list_catalog(
                 search=search,
                 category=category,
                 limit=limit if limit is not None else 100,
+                client=opensearch_client,
             )
         except (OpenSearchConnectionError, ConnectionTimeout) as exc:
             logger.warning(
-                "OpenSearch product search is unavailable; falling back to PostgreSQL: %s",
+                "OpenSearch product search is unavailable; "
+                "falling back to PostgreSQL: %s",
                 exc,
             )
             products = list_products(
@@ -52,8 +57,16 @@ def list_catalog(
         except TransportError as exc:
             # Do not hide mapping, index-name, authentication, or query errors.
             # Fall back only for transient timeout, overload, or server failures.
-            if getattr(exc, "status_code", None) not in {408, 429, 500, 502, 503, 504}:
+            if getattr(exc, "status_code", None) not in {
+                408,
+                429,
+                500,
+                502,
+                503,
+                504,
+            }:
                 raise
+
             logger.warning(
                 "OpenSearch product search returned transient HTTP status %s; "
                 "falling back to PostgreSQL",
@@ -67,6 +80,7 @@ def list_catalog(
             )
         else:
             products = get_products_by_ids_ordered(db, product_ids)
+
     else:
         raise RuntimeError(
             "Unsupported PRODUCT_SEARCH_BACKEND. Use 'legacy' or 'opensearch'."

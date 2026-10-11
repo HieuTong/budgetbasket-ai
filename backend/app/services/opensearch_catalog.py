@@ -1,21 +1,24 @@
 """OpenSearch-backed product retrieval; PostgreSQL remains authoritative."""
+
 from __future__ import annotations
 
 import os
 from urllib.parse import urlparse
-from app.core.config import BACKEND_DIR
-from app.core import config as _config
 
-def _client():
+
+def create_client():
+    """Create an OpenSearch client. The caller owns its lifecycle."""
     try:
         from opensearchpy import OpenSearch
     except ImportError as exc:
         raise RuntimeError(
-            "OpenSearch is enabled but opensearch-py is missing; install backend requirements."
+            "OpenSearch is enabled but opensearch-py is missing; "
+            "install backend requirements."
         ) from exc
 
     url = os.getenv("OPENSEARCH_URL", "http://localhost:9200")
     parsed = urlparse(url)
+
     if parsed.scheme not in {"http", "https"} or not parsed.hostname:
         raise RuntimeError("OPENSEARCH_URL must be an absolute http(s) URL.")
 
@@ -35,7 +38,6 @@ def _client():
             )
         host["http_auth"] = (username, password)
 
-    headers = {}
     access_client_id = os.getenv("CF_ACCESS_CLIENT_ID")
     access_client_secret = os.getenv("CF_ACCESS_CLIENT_SECRET")
 
@@ -44,6 +46,7 @@ def _client():
             "CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET must be set together."
         )
 
+    headers = {}
     if access_client_id and access_client_secret:
         headers = {
             "CF-Access-Client-Id": access_client_id,
@@ -64,46 +67,98 @@ def _client():
 
 
 def search_product_ids(
-    *, search: str | None, category: str | None, limit: int
+    *,
+    search: str | None,
+    category: str | None,
+    limit: int,
+    client=None,
 ) -> list[int]:
-    """Return product IDs ranked by lexical relevance."""
+    """Return product IDs ranked by lexical relevance.
+
+    An injected client is reused and remains owned by the caller.
+    If no client is supplied, create and close a client for this call.
+    """
     index = os.getenv("OPENSEARCH_PRODUCT_INDEX", "budgetbasket-products-v1")
+
     filters = []
     if category and category.strip():
         filters.append({"term": {"category.keyword": category.strip()}})
 
     query_text = (search or "").strip()
+
     if query_text:
         query = {
             "bool": {
-                "must": [{
-                    "multi_match": {
-                        "query": query_text,
-                        "type": "best_fields",
-                        "fuzziness": "AUTO",
-                        "fields": [
-                            "name^5", "brand^3", "sub_category^2",
-                            "product_group", "category",
-                        ],
-                    }
-                }],
-                "should": [{
-                    "multi_match": {
-                        "query": query_text,
-                        "type": "phrase",
-                        "fields": ["name^8", "brand^4"],
-                        "boost": 2,
-                    }
-                }],
+                "should": [
+                    {
+                        "multi_match": {
+                            "query": query_text,
+                            "type": "best_fields",
+                            "fuzziness": "AUTO",
+                            "operator": "and",
+                            "fields": ["name^5", "brand^2"],
+                        }
+                    },
+                    {
+                        "multi_match": {
+                            "query": query_text,
+                            "type": "best_fields",
+                            "fuzziness": "AUTO",
+                            "operator": "and",
+                            "fields": [
+                                "sub_category^0.2",
+                                "product_group^0.1",
+                                "category^0.05",
+                            ],
+                        }
+                    },
+                    {
+                        "term": {
+                            "name.keyword": {
+                                "value": query_text,
+                                "boost": 30,
+                            }
+                        }
+                    },
+                    {
+                        "match_phrase": {
+                            "name": {
+                                "query": query_text,
+                                "boost": 12,
+                            }
+                        }
+                    },
+                    {
+                        "match_phrase": {
+                            "brand": {
+                                "query": query_text,
+                                "boost": 3,
+                            }
+                        }
+                    },
+                ],
+                "minimum_should_match": 1,
                 "filter": filters,
             }
         }
-        sort = [{"_score": {"order": "desc"}}, {"product_id": {"order": "asc"}}]
+        sort = [
+            {"_score": {"order": "desc"}},
+            {"product_id": {"order": "asc"}},
+        ]
     else:
-        query = {"bool": {"filter": filters, "must": [{"match_all": {}}]}}
+        query = {
+            "bool": {
+                "filter": filters,
+                "must": [{"match_all": {}}],
+            }
+        }
         sort = [{"product_id": {"order": "asc"}}]
 
-    client = _client()
+
+    owns_client = client is None
+    if owns_client:
+        client = create_client()
+
     try:
         response = client.search(
             index=index,
@@ -115,11 +170,13 @@ def search_product_ids(
             },
         )
     finally:
-        client.close()
+        if owns_client:
+            client.close()
 
-    ids = []
+    product_ids = []
     for hit in response.get("hits", {}).get("hits", []):
         product_id = hit.get("_source", {}).get("product_id")
         if product_id is not None:
-            ids.append(int(product_id))
-    return ids
+            product_ids.append(int(product_id))
+
+    return product_ids
