@@ -1,3 +1,7 @@
+import asyncio
+
+from fastapi import FastAPI
+
 from app.services import opensearch_catalog
 
 
@@ -117,3 +121,21 @@ def test_owned_client_is_closed_when_search_fails(monkeypatch):
         raise AssertionError("Expected the search error to propagate")
 
     assert client.closed
+
+
+def test_fastapi_lifespan_creates_and_closes_shared_client(monkeypatch):
+    from app import main
+
+    client = FakeClient({"hits": {"hits": []}})
+    monkeypatch.setenv("PRODUCT_SEARCH_BACKEND", "opensearch")
+    monkeypatch.setattr(main, "create_client", lambda: client)
+    app = FastAPI()
+
+    async def exercise_lifespan():
+        async with main.lifespan(app):
+            assert app.state.opensearch_client is client
+            assert not client.closed
+        assert app.state.opensearch_client is None
+        assert client.closed
+
+    asyncio.run(exercise_lifespan())
