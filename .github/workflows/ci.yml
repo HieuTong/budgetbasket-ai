@@ -22,7 +22,7 @@ jobs:
       - name: Import sanity check
         run: python -c "from app.main import app; print('app imports OK')"
       - name: Run tests
-        run: pytest -q
+        run: python -m pytest -q
 
   docker-build:
     runs-on: ubuntu-latest
