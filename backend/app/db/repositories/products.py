@@ -68,3 +68,20 @@ def list_basket_products(
         .where(Product.unit_price > 0)
         .order_by(Product.id.asc())
     ).all()
+
+
+def get_products_by_ids_ordered(
+    db: Session,
+    product_ids: list[int],
+) -> list[Product]:
+    """Fetch canonical product rows in the order returned by a search backend."""
+    if not product_ids:
+        return []
+
+    products = (
+        db.query(Product)
+        .filter(Product.id.in_(product_ids))
+        .all()
+    )
+    by_id = {product.id: product for product in products}
+    return [by_id[product_id] for product_id in product_ids if product_id in by_id]

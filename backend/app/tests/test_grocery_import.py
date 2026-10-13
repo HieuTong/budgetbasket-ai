@@ -3,7 +3,6 @@ from decimal import Decimal
 
 from seed.import_grocery_dataset import normalize_row
 
-
 def test_normalize_grocery_row():
     row = {
         "index": "10",

@@ -1,0 +1,466 @@
+{
+  "configuration": {
+    "queries": [
+      "almond milk",
+      "soy milk",
+      "chicken",
+      "chiken",
+      "oat milk",
+      "coconut milk"
+    ],
+    "backends": [
+      "legacy",
+      "opensearch"
+    ],
+    "warmups_per_backend_query": 1,
+    "measured_iterations_per_backend_query": 5,
+    "limit": 5,
+    "latency_scope": "Full list_catalog path; OpenSearch client creation excluded",
+    "p95_method": "Nearest-rank percentile",
+    "relevance_method": "Rule-based Precision@5 heuristic; not human-judged ground truth"
+  },
+  "results": [
+    {
+      "backend": "legacy",
+      "query": "almond milk",
+      "successful_runs": 5,
+      "median_ms": 12.46,
+      "p95_ms": 13.69,
+      "min_ms": 10.04,
+      "max_ms": 13.69,
+      "requested_runs": 5,
+      "errors": 0,
+      "empty_results": 0,
+      "fallback_events": 0,
+      "mean_result_count": 5,
+      "precision_at_k_heuristic": 0.6,
+      "last_successful_results": [
+        {
+          "product_id": 12813,
+          "name": "Dairy Soy Light Calcium Plus",
+          "category": "Dairy, eggs & fridge",
+          "sub_category": "Milk"
+        },
+        {
+          "product_id": 12963,
+          "name": "So Good Unsweetened Almond Milk",
+          "category": "Dairy, eggs & fridge",
+          "sub_category": "Milk"
+        },
+        {
+          "product_id": 13451,
+          "name": "Unsweetened Almond Milk",
+          "category": "Dairy, eggs & fridge",
+          "sub_category": "Milk"
+        },
+        {
+          "product_id": 14076,
+          "name": "Extra Creamy Almond Milk",
+          "category": "Dairy, eggs & fridge",
+          "sub_category": "Milk"
+        },
+        {
+          "product_id": 15256,
+          "name": "So Good Chilled Regular Soy Milk",
+          "category": "Dairy, eggs & fridge",
+          "sub_category": "Milk"
+        }
+      ]
+    },
+    {
+      "backend": "opensearch",
+      "query": "almond milk",
+      "successful_runs": 5,
+      "median_ms": 199.94,
+      "p95_ms": 202.82,
+      "min_ms": 195.35,
+      "max_ms": 202.82,
+      "requested_runs": 5,
+      "errors": 0,
+      "empty_results": 0,
+      "fallback_events": 0,
+      "mean_result_count": 5,
+      "precision_at_k_heuristic": 1.0,
+      "last_successful_results": [
+        {
+          "product_id": 13451,
+          "name": "Unsweetened Almond Milk",
+          "category": "Dairy, eggs & fridge",
+          "sub_category": "Milk"
+        },
+        {
+          "product_id": 15257,
+          "name": "Unsweetened Almond Milk",
+          "category": "Dairy, eggs & fridge",
+          "sub_category": "Milk"
+        },
+        {
+          "product_id": 16692,
+          "name": "Creamy Almond Milk",
+          "category": "Dairy, eggs & fridge",
+          "sub_category": "Milk"
+        },
+        {
+          "product_id": 14076,
+          "name": "Extra Creamy Almond Milk",
+          "category": "Dairy, eggs & fridge",
+          "sub_category": "Milk"
+        },
+        {
+          "product_id": 16691,
+          "name": "Organic Activated Almond Milk",
+          "category": "Dairy, eggs & fridge",
+          "sub_category": "Milk"
+        }
+      ]
+    },
+    {
+      "backend": "legacy",
+      "query": "soy milk",
+      "successful_runs": 5,
+      "median_ms": 240.41,
+      "p95_ms": 275.81,
+      "min_ms": 226.77,
+      "max_ms": 275.81,
+      "requested_runs": 5,
+      "errors": 0,
+      "empty_results": 0,
+      "fallback_events": 0,
+      "mean_result_count": 4,
+      "precision_at_k_heuristic": 0.8,
+      "last_successful_results": [
+        {
+          "product_id": 14559,
+          "name": "Iced Coffee Soy Milk",
+          "category": "Dairy, eggs & fridge",
+          "sub_category": "Milk"
+        },
+        {
+          "product_id": 15256,
+          "name": "So Good Chilled Regular Soy Milk",
+          "category": "Dairy, eggs & fridge",
+          "sub_category": "Milk"
+        },
+        {
+          "product_id": 16486,
+          "name": "Chocolate Soy Milk",
+          "category": "Dairy, eggs & fridge",
+          "sub_category": "Milk"
+        },
+        {
+          "product_id": 17275,
+          "name": "Regular Soy Milk",
+          "category": "Dairy, eggs & fridge",
+          "sub_category": "Milk"
+        }
+      ]
+    },
+    {
+      "backend": "opensearch",
+      "query": "soy milk",
+      "successful_runs": 5,
+      "median_ms": 192.53,
+      "p95_ms": 201.62,
+      "min_ms": 189.4,
+      "max_ms": 201.62,
+      "requested_runs": 5,
+      "errors": 0,
+      "empty_results": 0,
+      "fallback_events": 0,
+      "mean_result_count": 5,
+      "precision_at_k_heuristic": 1.0,
+      "last_successful_results": [
+        {
+          "product_id": 17275,
+          "name": "Regular Soy Milk",
+          "category": "Dairy, eggs & fridge",
+          "sub_category": "Milk"
+        },
+        {
+          "product_id": 16486,
+          "name": "Chocolate Soy Milk",
+          "category": "Dairy, eggs & fridge",
+          "sub_category": "Milk"
+        },
+        {
+          "product_id": 14559,
+          "name": "Iced Coffee Soy Milk",
+          "category": "Dairy, eggs & fridge",
+          "sub_category": "Milk"
+        },
+        {
+          "product_id": 15256,
+          "name": "So Good Chilled Regular Soy Milk",
+          "category": "Dairy, eggs & fridge",
+          "sub_category": "Milk"
+        },
+        {
+          "product_id": 15870,
+          "name": "Soy Lite Milk",
+          "category": "Dairy, eggs & fridge",
+          "sub_category": "Milk"
+        }
+      ]
+    },
+    {
+      "backend": "legacy",
+      "query": "chicken",
+      "successful_runs": 5,
+      "median_ms": 4.85,
+      "p95_ms": 5.38,
+      "min_ms": 3.85,
+      "max_ms": 5.38,
+      "requested_runs": 5,
+      "errors": 0,
+      "empty_results": 0,
+      "fallback_events": 0,
+      "mean_result_count": 5,
+      "precision_at_k_heuristic": 0.8,
+      "last_successful_results": [
+        {
+          "product_id": 12280,
+          "name": "RSPCA Approved Chicken Breast Kiev Garlic Butter",
+          "category": "Meat & seafood",
+          "sub_category": "Poultry"
+        },
+        {
+          "product_id": 12281,
+          "name": "RSPCA Approved Extra Large Whole Chicken",
+          "category": "Meat & seafood",
+          "sub_category": "Poultry"
+        },
+        {
+          "product_id": 12389,
+          "name": "Chilli Sauce With Diced Chicken",
+          "category": "Pantry",
+          "sub_category": "Sauces"
+        },
+        {
+          "product_id": 12393,
+          "name": "RSPCA Approved Chicken Breast Schnitzel Plain Crumb",
+          "category": "Meat & seafood",
+          "sub_category": "Poultry"
+        },
+        {
+          "product_id": 12394,
+          "name": "Free Range Chicken Stir Fry Large Pack",
+          "category": "Meat & seafood",
+          "sub_category": "Poultry"
+        }
+      ]
+    },
+    {
+      "backend": "opensearch",
+      "query": "chicken",
+      "successful_runs": 5,
+      "median_ms": 200.08,
+      "p95_ms": 206.26,
+      "min_ms": 197.19,
+      "max_ms": 206.26,
+      "requested_runs": 5,
+      "errors": 0,
+      "empty_results": 0,
+      "fallback_events": 0,
+      "mean_result_count": 5,
+      "precision_at_k_heuristic": 1.0,
+      "last_successful_results": [
+        {
+          "product_id": 14691,
+          "name": "Chicken Breast Schnitzels",
+          "category": "Meat & seafood",
+          "sub_category": "Poultry"
+        },
+        {
+          "product_id": 13553,
+          "name": "RSPCA Approved Chicken Necks",
+          "category": "Meat & seafood",
+          "sub_category": "Poultry"
+        },
+        {
+          "product_id": 13922,
+          "name": "RSPCA Approved Chicken Giblets",
+          "category": "Meat & seafood",
+          "sub_category": "Poultry"
+        },
+        {
+          "product_id": 14036,
+          "name": "RSPCA Approved Chicken Livers",
+          "category": "Meat & seafood",
+          "sub_category": "Poultry"
+        },
+        {
+          "product_id": 14037,
+          "name": "RSPCA Approved Chicken Frames",
+          "category": "Meat & seafood",
+          "sub_category": "Poultry"
+        }
+      ]
+    },
+    {
+      "backend": "legacy",
+      "query": "chiken",
+      "successful_runs": 5,
+      "median_ms": 258.0,
+      "p95_ms": 258.58,
+      "min_ms": 238.19,
+      "max_ms": 258.58,
+      "requested_runs": 5,
+      "errors": 0,
+      "empty_results": 5,
+      "fallback_events": 0,
+      "mean_result_count": 0,
+      "precision_at_k_heuristic": 0.0,
+      "last_successful_results": []
+    },
+    {
+      "backend": "opensearch",
+      "query": "chiken",
+      "successful_runs": 5,
+      "median_ms": 197.93,
+      "p95_ms": 200.25,
+      "min_ms": 195.48,
+      "max_ms": 200.25,
+      "requested_runs": 5,
+      "errors": 0,
+      "empty_results": 0,
+      "fallback_events": 0,
+      "mean_result_count": 5,
+      "precision_at_k_heuristic": 1.0,
+      "last_successful_results": [
+        {
+          "product_id": 14691,
+          "name": "Chicken Breast Schnitzels",
+          "category": "Meat & seafood",
+          "sub_category": "Poultry"
+        },
+        {
+          "product_id": 13553,
+          "name": "RSPCA Approved Chicken Necks",
+          "category": "Meat & seafood",
+          "sub_category": "Poultry"
+        },
+        {
+          "product_id": 13922,
+          "name": "RSPCA Approved Chicken Giblets",
+          "category": "Meat & seafood",
+          "sub_category": "Poultry"
+        },
+        {
+          "product_id": 14036,
+          "name": "RSPCA Approved Chicken Livers",
+          "category": "Meat & seafood",
+          "sub_category": "Poultry"
+        },
+        {
+          "product_id": 14037,
+          "name": "RSPCA Approved Chicken Frames",
+          "category": "Meat & seafood",
+          "sub_category": "Poultry"
+        }
+      ]
+    },
+    {
+      "backend": "legacy",
+      "query": "oat milk",
+      "successful_runs": 5,
+      "median_ms": 264.72,
+      "p95_ms": 270.18,
+      "min_ms": 168.71,
+      "max_ms": 270.18,
+      "requested_runs": 5,
+      "errors": 0,
+      "empty_results": 0,
+      "fallback_events": 0,
+      "mean_result_count": 1,
+      "precision_at_k_heuristic": 0.0,
+      "last_successful_results": [
+        {
+          "product_id": 14577,
+          "name": "Chocolate Block Oat Milk",
+          "category": "Pantry",
+          "sub_category": "Confectionery"
+        }
+      ]
+    },
+    {
+      "backend": "opensearch",
+      "query": "oat milk",
+      "successful_runs": 5,
+      "median_ms": 198.35,
+      "p95_ms": 203.43,
+      "min_ms": 190.47,
+      "max_ms": 203.43,
+      "requested_runs": 5,
+      "errors": 0,
+      "empty_results": 5,
+      "fallback_events": 0,
+      "mean_result_count": 0,
+      "precision_at_k_heuristic": 0.0,
+      "last_successful_results": []
+    },
+    {
+      "backend": "legacy",
+      "query": "coconut milk",
+      "successful_runs": 5,
+      "median_ms": 239.94,
+      "p95_ms": 279.38,
+      "min_ms": 230.81,
+      "max_ms": 279.38,
+      "requested_runs": 5,
+      "errors": 0,
+      "empty_results": 0,
+      "fallback_events": 0,
+      "mean_result_count": 3,
+      "precision_at_k_heuristic": 0.4,
+      "last_successful_results": [
+        {
+          "product_id": 15995,
+          "name": "Coconut Milk Chocolate Block",
+          "category": "Pantry",
+          "sub_category": "Confectionery"
+        },
+        {
+          "product_id": 16297,
+          "name": "Organic Almond & Coconut Milk",
+          "category": "Dairy, eggs & fridge",
+          "sub_category": "Milk"
+        },
+        {
+          "product_id": 17451,
+          "name": "Gluten Free Organic Coco Quench Unsweetened Coconut Milk",
+          "category": "Dairy, eggs & fridge",
+          "sub_category": "Milk"
+        }
+      ]
+    },
+    {
+      "backend": "opensearch",
+      "query": "coconut milk",
+      "successful_runs": 5,
+      "median_ms": 197.41,
+      "p95_ms": 210.19,
+      "min_ms": 195.29,
+      "max_ms": 210.19,
+      "requested_runs": 5,
+      "errors": 0,
+      "empty_results": 0,
+      "fallback_events": 0,
+      "mean_result_count": 2,
+      "precision_at_k_heuristic": 0.4,
+      "last_successful_results": [
+        {
+          "product_id": 16297,
+          "name": "Organic Almond & Coconut Milk",
+          "category": "Dairy, eggs & fridge",
+          "sub_category": "Milk"
+        },
+        {
+          "product_id": 17451,
+          "name": "Gluten Free Organic Coco Quench Unsweetened Coconut Milk",
+          "category": "Dairy, eggs & fridge",
+          "sub_category": "Milk"
+        }
+      ]
+    }
+  ]
+}
