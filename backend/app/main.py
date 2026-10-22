@@ -88,31 +88,46 @@ def readiness():
     return {"status": "ready"}
 
 
-app.include_router(catalog.router)
-app.include_router(purchases.router)
-app.include_router(basket.router)
-app.include_router(chat.router)
-app.include_router(purchase_profile_router)
-app.include_router(price_intelligence.router)
-app.include_router(similarity.router)
-app.include_router(decision.router)
+app.include_router(
+    catalog.router,
+    prefix="/api/catalog",
+    tags=["catalog"],
+)
 
+app.include_router(
+    purchases.router,
+    prefix="/api/purchases",
+    tags=["purchases"],
+)
 
-@app.get("/health")
-def health():
-    return {"status": "ok"}
+app.include_router(
+    basket.router,
+    prefix="/api/basket",
+    tags=["basket"],
+)
 
+app.include_router(
+    chat.router,
+    prefix="/api/chat",
+    tags=["agent"],
+)
 
-@app.get("/ready")
-def readiness():
-    try:
-        with engine.connect() as connection:
-            connection.execute(text("SELECT 1"))
-    except Exception as exc:
-        logger.exception("Database readiness check failed")
-        raise HTTPException(
-            status_code=503,
-            detail="database_unavailable",
-        ) from exc
+app.include_router(
+    purchase_profile_router,
+    prefix="/api",
+)
 
-    return {"status": "ready"}
+app.include_router(
+    price_intelligence.router,
+    prefix="/api",
+)
+
+app.include_router(
+    similarity.router,
+    prefix="/api",
+)
+
+app.include_router(
+    decision.router,
+    prefix="/api",
+)
