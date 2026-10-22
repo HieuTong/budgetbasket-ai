@@ -58,7 +58,7 @@ def test_opensearch_client_is_shared_with_route_and_closed_on_shutdown(
     )
 
     with TestClient(app) as test_client:
-        response = test_client.get("/products")
+        response = test_client.get("/api/catalog/products")
 
         assert response.status_code == 200
         assert response.json() == {"items": []}
