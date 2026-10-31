@@ -20,11 +20,13 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--json-out")
     ap.add_argument("--min-pass-rate", type=float, default=0.9)
+    ap.add_argument("--pause", type=float, default=0.0, help="seconds between cases, to respect rate limits")
     a = ap.parse_args()
     if not os.getenv("GEMINI_API_KEY"):
         sys.exit("GEMINI_API_KEY is not set; the live evaluation needs the real model.")
 
-    results = run_eval(BudgetAgent(tool_registry=stub_tools()))
+    print(f"Model: {os.getenv('LLM_MODEL', '(config default)')}")
+    results = run_eval(BudgetAgent(tool_registry=stub_tools()), pause_s=a.pause)
     summary = summarise(results)
     print("| case | passed | tools called | latency (s) | tokens | failures |")
     print("|---|---|---|---|---|---|")
