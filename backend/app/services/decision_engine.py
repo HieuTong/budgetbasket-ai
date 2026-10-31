@@ -49,9 +49,9 @@ def make_decision(
     1. Prefer a strong cheaper substitute when the substitute is
        sufficiently similar and provides meaningful savings.
     2. Otherwise, recommend waiting when the forecast indicates a
-       meaningful price increase with reasonable confidence.
-    3. Otherwise, recommend buying when the evidence supports the
-       current price.
+       meaningful price DECREASE (5% or more) with reasonable confidence.
+    3. Otherwise, recommend buying when a confident forecast says the
+       price will rise, stay flat, or fall too little to be worth waiting.
     4. Return NO_ACTION when there is insufficient evidence.
 
     The engine does not calculate forecasts or discover substitutes.
@@ -92,38 +92,34 @@ def make_decision(
             price_probability=evidence.price_probability,
         )
 
-    if (
+    has_forecast = (
         evidence.forecast_change_percent is not None
         and evidence.forecast_confidence is not None
-        and evidence.forecast_change_percent >= 5.0
         and evidence.forecast_confidence >= 0.50
-    ):
+    )
+
+    # WAIT only when the price is expected to FALL meaningfully: waiting is then likely cheaper.
+    if has_forecast and evidence.forecast_change_percent <= -5.0:
+        drop = abs(evidence.forecast_change_percent)
         confidence = min(
             0.95,
             0.50
             + 0.30 * evidence.forecast_confidence
-            + 0.20 * min(
-                evidence.forecast_change_percent / 20.0,
-                1.0,
-            ),
+            + 0.20 * min(drop / 20.0, 1.0),
         )
 
         return DecisionResult(
             decision=Decision.WAIT,
             confidence=round(confidence, 2),
             reason=(
-                "The forecast indicates a meaningful price increase "
-                "with reasonable confidence."
+                "The forecast indicates a meaningful price decrease "
+                "with reasonable confidence, so waiting is likely cheaper."
             ),
             price_probability=evidence.price_probability,
         )
 
-    if (
-        evidence.forecast_change_percent is not None
-        and evidence.forecast_confidence is not None
-        and evidence.forecast_change_percent <= 0
-        and evidence.forecast_confidence >= 0.50
-    ):
+    # BUY when the price is expected to rise, stay flat, or fall too little to be worth waiting for.
+    if has_forecast:
         confidence = min(
             0.90,
             0.50
@@ -135,8 +131,8 @@ def make_decision(
             decision=Decision.BUY,
             confidence=round(confidence, 2),
             reason=(
-                "The current price is not expected to increase "
-                "meaningfully."
+                "The current price is not expected to fall meaningfully, "
+                "so waiting is unlikely to save money."
             ),
             price_probability=evidence.price_probability,
         )

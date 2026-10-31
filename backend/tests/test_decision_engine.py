@@ -20,7 +20,8 @@ def test_strong_cheaper_substitute_returns_substitute():
     assert "savings" in result.reason.lower()
 
 
-def test_meaningful_price_increase_returns_wait():
+def test_meaningful_price_increase_returns_buy():
+    # Regression test: a rising price means buy now. This used to return WAIT.
     evidence = DecisionEvidence(
         current_price=8.50,
         forecast_price=9.20,
@@ -30,12 +31,26 @@ def test_meaningful_price_increase_returns_wait():
 
     result = make_decision(evidence)
 
+    assert result.decision == Decision.BUY
+    assert 0.0 < result.confidence <= 0.90
+
+
+def test_meaningful_price_decrease_returns_wait():
+    evidence = DecisionEvidence(
+        current_price=8.50,
+        forecast_price=7.60,
+        forecast_change_percent=-10.6,
+        forecast_confidence=0.72,
+    )
+
+    result = make_decision(evidence)
+
     assert result.decision == Decision.WAIT
     assert 0.0 < result.confidence <= 0.95
-    assert "forecast" in result.reason.lower()
+    assert "decrease" in result.reason.lower()
 
 
-def test_non_increasing_price_returns_buy():
+def test_small_decrease_is_not_worth_waiting_for():
     evidence = DecisionEvidence(
         current_price=8.50,
         forecast_price=8.40,
@@ -48,6 +63,17 @@ def test_non_increasing_price_returns_buy():
     assert result.decision == Decision.BUY
     assert 0.0 < result.confidence <= 0.90
     assert "price" in result.reason.lower()
+
+
+def test_low_confidence_forecast_returns_no_action():
+    evidence = DecisionEvidence(
+        current_price=8.50,
+        forecast_price=6.00,
+        forecast_change_percent=-29.4,
+        forecast_confidence=0.20,
+    )
+
+    assert make_decision(evidence).decision == Decision.NO_ACTION
 
 
 def test_insufficient_evidence_returns_no_action():
