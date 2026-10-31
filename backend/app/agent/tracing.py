@@ -27,6 +27,7 @@ class AgentTrace:
     tool_calls: list[ToolCall] = field(default_factory=list)
     final_answer: str = ""
     total_latency_s: float = 0.0
+    error: str = ""  # last provider error, if any (e.g. 503 or 429)
 
     @property
     def prompt_tokens(self) -> int:

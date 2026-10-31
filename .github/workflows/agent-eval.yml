@@ -26,7 +26,7 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
       - name: Run agent evaluation (fails the job if the gate fails)
-        run: python scripts/run_agent_eval.py --json-out agent_eval.json --pause 6
+        run: python scripts/run_agent_eval.py --json-out agent_eval.json --pause 6 --retry-errors-after 60
       - name: Upload traces
         if: always()
         uses: actions/upload-artifact@v4
