@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.db.models import PriceObservation, Product, Purchase
 from app.db.session import get_db
 from app.ml.forecasting import PricePoint, price_trend
+from app.services.price_trend import load_price_trend
 from app.services.price_intelligence import (
     build_market_price_snapshot,
     build_product_price_history,
@@ -118,50 +119,16 @@ def get_product_price_forecast(
     weekly prices before fitting a linear trend.
     """
 
-    product = (
-        db.query(Product)
-        .filter(Product.id == product_id)
-        .first()
-    )
+    trend = load_price_trend(db, product_id, horizon_weeks=4)
 
-    if product is None:
+    if trend is None:
         raise HTTPException(
             status_code=404,
             detail="Product not found",
         )
 
-    purchases = (
-        db.query(Purchase)
-        .filter(
-            Purchase.product_id == product_id,
-            Purchase.source == "dunnhumby_complete_journey",
-        )
-        .order_by(Purchase.purchased_at)
-        .all()
-    )
-
-    history = build_product_price_history(
-        product=product,
-        purchases=purchases,
-    )
-
-    price_points = [
-        PricePoint(
-            date=point.date,
-            unit_price=point.unit_price,
-            transaction_count=point.transaction_count,
-        )
-        for point in history.points
-    ]
-
-    forecast = price_trend(
-        history=price_points,
-        forecast_horizon_weeks=4,
-    )
-
     return {
-        "product_id": product.id,
-        "product_name": product.name,
-        "forecast": forecast,
+        "product_id": trend.product.id,
+        "product_name": trend.product.name,
+        "forecast": trend.forecast,
     }
-

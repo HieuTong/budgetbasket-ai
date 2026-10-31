@@ -10,9 +10,12 @@ type Message = {
   error?: boolean;
 };
 
+// Each suggestion maps to something the assistant can actually do with its tools.
 const SUGGESTIONS = [
-  "swap something to save $5",
-  "why is bread more expensive this week?",
+  "build me a $60 basket",
+  "should I buy milk now or wait?",
+  "how has bread's price changed lately?",
+  "find a cheaper swap for cheese",
 ];
 
 export default function AgentChat({ userId }: { userId: number }) {
@@ -120,8 +123,8 @@ export default function AgentChat({ userId }: { userId: number }) {
       >
         {messages.length === 0 && (
           <p className="bb-empty">
-            Try: “swap something to save $5” or “why is bread more
-            expensive this week?”
+            Try: “build me a $60 basket” or “should I buy milk now or
+            wait?”
           </p>
         )}
 
