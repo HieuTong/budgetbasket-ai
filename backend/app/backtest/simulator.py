@@ -28,6 +28,7 @@ class PolicyResult:
     backfires: int = 0       # delayed, then paid more than the price when the need arose
     weeks_waited: int = 0
     per_category: dict = field(default_factory=dict)
+    per_product: dict = field(default_factory=dict)  # product_id -> spend, used for bootstrap intervals
 
 
 @dataclass
@@ -38,6 +39,8 @@ class BacktestReport:
     needs: int
     products: int
     source: str
+    always_by_product: dict = field(default_factory=dict)
+    oracle_by_product: dict = field(default_factory=dict)
 
     def summary_rows(self) -> list[dict]:
         rows = []
@@ -70,6 +73,8 @@ def run_backtest(series: list[WeeklySeries], policies: list[Policy], *, warmup_w
     results = {p.name: PolicyResult(p.name) for p in policies}
     oracle = always = 0.0
     needs = 0
+    always_by: dict[str, float] = {}
+    oracle_by: dict[str, float] = {}
     for s in series:
         max_wait = max_wait_for(s.category, perishable_wait, pantry_wait)
         last = len(s.prices) - 1
@@ -78,6 +83,8 @@ def run_backtest(series: list[WeeklySeries], policies: list[Policy], *, warmup_w
             window = s.prices[t:deadline + 1]
             oracle += min(window)
             always += s.prices[t]
+            always_by[s.product_id] = always_by.get(s.product_id, 0.0) + s.prices[t]
+            oracle_by[s.product_id] = oracle_by.get(s.product_id, 0.0) + min(window)
             needs += 1
             for p in policies:
                 week = t
@@ -95,5 +102,7 @@ def run_backtest(series: list[WeeklySeries], policies: list[Policy], *, warmup_w
                 cat = r.per_category.setdefault(s.category, {"spend": 0.0, "needs": 0})
                 cat["spend"] += paid
                 cat["needs"] += 1
+                r.per_product[s.product_id] = r.per_product.get(s.product_id, 0.0) + paid
     sources = {s.source for s in series}
-    return BacktestReport(results, oracle, always, needs, len(series), "+".join(sorted(sources)))
+    return BacktestReport(results, oracle, always, needs, len(series), "+".join(sorted(sources)),
+                          always_by, oracle_by)
