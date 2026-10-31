@@ -1,5 +1,6 @@
 import json
 import os
+import random
 import time
 from google import genai
 from google.genai import types
@@ -174,7 +175,9 @@ class BudgetAgent:
         for _ in range(max_steps):
             resp = None
 
-            for attempt in range(2):
+            max_attempts = int(os.getenv("AGENT_LLM_ATTEMPTS", "3"))
+
+            for attempt in range(max_attempts):
                 try:
                     call_started = time.perf_counter()
                     resp = self.client.models.generate_content(
@@ -191,6 +194,8 @@ class BudgetAgent:
                     break
                 except Exception as exc:
                     error_text = str(exc)
+
+                    trace.error = error_text[:300]
 
                     if "429" in error_text:
                         print(
@@ -216,7 +221,7 @@ class BudgetAgent:
                             "the AI service is temporarily unavailable."
                         )
 
-                    if attempt == 1:
+                    if attempt == max_attempts - 1:
                         print(
                             f"[Agent] Gemini request failed after retry: {exc}"
                         )
@@ -229,7 +234,9 @@ class BudgetAgent:
                         "[Agent] Gemini temporarily unavailable. "
                         "Retrying..."
                     )
-                    time.sleep(1)
+                    # Exponential backoff with jitter: wait longer each time, and randomly,
+                    # so many clients don't all retry at the same instant.
+                    time.sleep(min(8.0, 2.0 ** (attempt + 1)) * random.uniform(0.5, 1.0))
 
             candidate = resp.candidates[0]
             contents.append(candidate.content)
