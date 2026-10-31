@@ -2,10 +2,9 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.agent.agent import BudgetAgent
-from app.db.repositories.purchases import get_user_purchases
 from app.db.session import get_db
 from app.schemas import ChatRequest
-
+from app.services.basket import build_basket_candidates
 
 router = APIRouter()
 
@@ -15,14 +14,14 @@ def chat(
     req: ChatRequest,
     db: Session = Depends(get_db),
 ):
-    purchases = get_user_purchases(
-        db,
-        req.user_id,
-    )
+    # The same candidates the basket page uses, so "build me a basket" in chat
+    # optimises the user's real products instead of an empty list.
+    candidates, purchase_count = build_basket_candidates(db, req.user_id)
 
     context = {
         "user_id": req.user_id,
-        "purchase_history_count": len(purchases),
+        "purchase_history_count": purchase_count,
+        "candidates": candidates,
     }
 
     reply = BudgetAgent().run(
