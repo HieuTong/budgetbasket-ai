@@ -5,6 +5,48 @@ A cost-of-living optimizer for Australian households: given your usual purchases
 **Live Demo:** https://budgetbasket.tech  
 **GitHub:** https://github.com/HieuTong/budgetbasket-ai
 
+## Results at a glance
+
+| Question | Result | How to reproduce |
+|---|---|---|
+| Does the BUY/WAIT advice save money? | The original engine saved **0%**. A dedicated specials model saves **11.4%** versus always buying (95% interval 8.9% to 14.1%), similar to a simple "buy near the recent low" rule (10.3%), while asking households to wait about half as often (44% vs 76% of purchases) and backfiring less than half as often (15% vs 34% of waits). | `python scripts/run_specials_experiment.py --synthetic` |
+| Does the agent use its tools correctly? | **10 of 10** evaluation cases passed with **0** budget violations, including a prompt-injection attempt it safely refused. | `python scripts/run_agent_eval.py` |
+| Is it fast enough? | Median **4.1 s**, p95 **10.4 s** per request (p95 was 76.8 s before adding timeouts and retries), about 1,640 tokens per request on `gemini-3.1-flash-lite`. | Traces from the evaluation run |
+
+> The savings results use **synthetic** price data generated with regular specials cycles, which flatters a cycle-aware model. They show the method works end to end; real Australian price data is the next step (see Known limitations).
+
+## What the evaluation uncovered, and what changed
+
+1. **The decision engine never saved money.** A backtest that replays price history without look-ahead showed it behaved exactly like "always buy". There were two stacked causes:
+   - The WAIT rule was **inverted**: it waited when prices were expected to *rise*. Fixed, with a regression test.
+   - The linear forecast's confidence (R²) was almost always near zero on specials-driven prices (median 0.01), so the engine rarely acted at all. To address this, a separate model predicts whether an item will be at least 10% cheaper within the household's waiting window. It has been built and evaluated in the backtest; connecting it to the live app is the next step.
+2. **The new model is not claimed to save more than the simple rule.** The difference is +1.2 points, but its 95% interval (−0.2 to +2.5) includes zero. Its real advantage is behaviour: fewer waits and fewer waits that backfire.
+3. **The agent evaluation tested the wrong thing at first.** A "failed" injection case was the agent safely refusing to invent prices, so the check now tests the property that matters (no invented prices) rather than one specific behaviour. Random 18 to 77 second API stalls led to per-call timeouts with retry. Disabling the model's thinking did not reduce latency in a measured comparison, so the default was kept.
+
+## How decisions stay trustworthy
+
+- **Deterministic decisions:** the optimiser and models make every decision; the LLM routes requests and explains results but never computes prices or totals.
+- **No invented prices:** enforced in the system prompt and checked by the agent evaluation.
+- **Budget safety:** a property test checks the optimiser never exceeds the budget across 150 random baskets on every push, and the live evaluation gate tolerates zero budget violations.
+- **Traceability:** every agent request records each model call and tool call with arguments, latency and tokens.
+- **Honest evaluation:** time-based splits with an embargo, thresholds tuned only on training data, and bootstrap intervals resampled by product.
+
+## Reproduce the evaluations
+
+```bash
+cd backend
+python -m pytest -q                                   # full suite, also run in CI on every push
+python scripts/run_backtest.py --synthetic            # BUY/WAIT policies vs an oracle
+python scripts/run_specials_experiment.py --synthetic # specials model with 95% intervals
+python scripts/run_agent_eval.py --json-out agent_eval.json  # live agent evaluation (needs GEMINI_API_KEY)
+```
+
+## Known limitations
+
+- **Synthetic price data** in the backtest. Real observations (via `open_prices_client.py` or a public Australian price dataset) are needed before any savings claim.
+- **The chat route does not yet pass the user's candidate products to the optimiser**, so basket optimisation through the live chat returns an empty basket. The agent evaluation supplies candidates directly, which is why it did not catch this; an end-to-end test through the API route is planned.
+- **The agent evaluation uses stubbed database tools** (the optimiser is real) and has only 10 cases, so one case moves the pass rate by 10 points.
+
 ## Why this project
 
 Grocery prices in Australia have risen sharply, and most "AI shopping" demos are thin wrappers around a chat prompt. This project is built to show the opposite: a **real optimization algorithm** at the core, with search, ML, and LLM components layered around it where they are the right tool — not used everywhere for effect.
@@ -165,7 +207,7 @@ python -m seed.load_seed_data
 
 The linear-regression price forecaster in `app/ml/forecasting.py` can average out short-term cyclical price movements instead of identifying them. For example, a cyclical item such as bananas may be classified as stable with low confidence.
 
-Seasonal decomposition or a Fourier feature could help model such patterns. This remains a known limitation and a potential improvement.
+Seasonal decomposition or a Fourier feature could help model such patterns. The specials-timing model in `app/backtest/specials_model.py` takes a different route: instead of forecasting the price line, it predicts whether an item will be at least 10% cheaper within the household's waiting window.
 
 ## Running locally
 
@@ -212,7 +254,7 @@ The project uses separate services for the application and its supporting infras
 - **Database:** PostgreSQL hosted on Supabase.
 - **Frontend:** Next.js hosted on Vercel.
 - **Search infrastructure:** OpenSearch deployed on an Azure Linux virtual machine using Docker.
-- **CI:** GitHub Actions runs the configured import sanity check and Docker build.
+- **CI:** GitHub Actions runs the full pytest suite against a PostgreSQL service, then builds the Docker image. A separate weekly workflow runs the live agent evaluation and fails on any budget violation.
 
 See `DEPLOYMENT.md` for the backend deployment walkthrough.
 
@@ -223,6 +265,8 @@ For security, do not expose OpenSearch directly to the public internet. Restrict
 ## Testing and Evaluation
 
 The project uses automated checks and targeted evaluation to improve correctness and reliability.
+
+The full test suite runs on every push and pull request. Beyond unit tests, three evaluations are described in Results at a glance: a decision backtest, the specials-model experiment with bootstrap intervals, and the agent evaluation with its release gate.
 
 For search evaluation, the benchmark compares the PostgreSQL-based search path with OpenSearch under the same measured query scenarios.
 
@@ -243,7 +287,11 @@ Useful next steps include:
 - Improve price forecasting with seasonal decomposition or Fourier features to better capture cyclical produce prices.
 - Integrate `open_prices_client.py` into a scheduled ingestion workflow to gradually replace synthetic history with real contributed Australian price observations.
 - Connect real purchase history from PostgreSQL to the optimizer's utility scoring.
-- Add pytest coverage for the optimizer and RAG retriever.
+- Run the backtest on real Australian price observations.
+- Connect the specials-timing model to the live BUY/WAIT decision once it is validated on real data.
+- Pass the user's candidate products from the chat route to the optimiser, with an end-to-end test.
+- Fix or remove `app/services/decision_utility.py`, which shares the old inverted WAIT logic and is unused.
+- Grow the agent evaluation set and report infrastructure errors (such as rate limits) separately from behaviour failures.
 - Expand search relevance evaluation with a larger query set and human-judged relevance labels.
 - Evaluate search performance under concurrent load and document operational limits.
 - Improve handling of OpenSearch outages, timeouts, and recovery.
