@@ -9,6 +9,7 @@ from app.agent.tools import TOOL_REGISTRY
 from app.agent.tracing import AgentTrace, LLMCall, ToolCall
 from app.core.config import settings
 from app.ml.optimizer import BasketItem
+from app.services.basket import MAX_DISTINCT_PRODUCTS
 from app.ml.similarity import Product
 
 SYSTEM_PROMPT = (
@@ -147,7 +148,7 @@ class BudgetAgent:
                 parts=[
                     types.Part(
                         text=(
-                            f"Context: {json.dumps(context)}"
+                            f"Context: {json.dumps(self._prompt_context(context))}"
                             f"\n\nRequest: {user_message}"
                         )
                     )
@@ -336,6 +337,16 @@ class BudgetAgent:
         )
 
     @staticmethod
+    def _prompt_context(context: dict) -> dict:
+        """What the model sees. Candidate products go to the optimiser tool, not into the prompt:
+        the model doesn't need them, and sending the whole catalogue costs tokens and
+        widens the surface for prompt injection through product names."""
+        visible = {k: v for k, v in context.items() if k != "candidates"}
+        if "candidates" in context:
+            visible["candidate_product_count"] = len(context["candidates"])
+        return visible
+
+    @staticmethod
     def _extra_args(
         fn_name: str,
         context: dict,
@@ -356,6 +367,7 @@ class BudgetAgent:
 
             return {
                 "candidates": candidates,
+                "max_distinct_products": MAX_DISTINCT_PRODUCTS,
             }
 
         if fn_name == "find_substitutes":
