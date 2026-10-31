@@ -11,6 +11,7 @@ import AgentChat from "@/components/AgentChat";
 import SwapTips from "@/components/SwapTips";
 import {
   optimizeBasket,
+  type BasketItem,
   type OptimizeResponse,
   type Product,
 } from "@/lib/api";
@@ -55,6 +56,20 @@ export default function Home() {
     }
   }
 
+  function selectBasketItem(item: BasketItem) {
+    setSelectedProduct({
+      id: item.product_id,
+      name: item.name,
+      brand: "",
+      category: "",
+      unit_price: item.unit_price,
+    });
+    // On narrow screens the advice is further down the page, so bring it into view.
+    document
+      .getElementById("product-guidance")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   return (
     <div className="bb-app">
       <DashboardHeader
@@ -94,10 +109,13 @@ export default function Home() {
             basket={basket}
             loading={loading}
             budget={basketBudget ?? budget}
+            onSelectItem={selectBasketItem}
+            selectedProductId={selectedProduct?.id ?? null}
           />
         </section>
 
         <section
+          id="product-guidance"
           className="bb-column bb-guidance-column"
           aria-label="Product guidance"
         >

@@ -1,7 +1,40 @@
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
 
+// Every request gets a time limit, so a stuck backend can't leave the UI waiting forever.
+const DEFAULT_TIMEOUT_MS = 20_000;
+// The assistant may call several tools and retry the model, so it gets longer.
+const CHAT_TIMEOUT_MS = 60_000;
+
+export class TimeoutError extends Error {
+  constructor(message = "The request took too long.") {
+    super(message);
+    this.name = "TimeoutError";
+  }
+}
+
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit = {},
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new TimeoutError();
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export type BasketItem = {
+  product_id: number;
   name: string;
   qty: number;
   unit_price: number;
@@ -70,7 +103,7 @@ export async function optimizeBasket(
   userId: number,
   budget: number,
 ): Promise<OptimizeResponse> {
-  const res = await fetch(`${API_BASE}/api/basket/optimize`, {
+  const res = await fetchWithTimeout(`${API_BASE}/api/basket/optimize`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -105,7 +138,7 @@ export async function getProducts(
 
   const query = params.toString();
 
-  const res = await fetch(
+  const res = await fetchWithTimeout(
     `${API_BASE}/api/catalog/products${query ? `?${query}` : ""}`,
   );
 
@@ -152,7 +185,7 @@ export async function getDecision(
 
   const query = params.toString();
 
-  const res = await fetch(
+  const res = await fetchWithTimeout(
     `${API_BASE}/api/decision/${productId}${query ? `?${query}` : ""}`,
   );
 
@@ -176,7 +209,7 @@ export async function getSubstitutes(
     params.set("user_id", String(userId));
   }
 
-  const res = await fetch(
+  const res = await fetchWithTimeout(
     `${API_BASE}/api/similarity/${productId}/substitutes?${params}`,
   );
 
@@ -187,22 +220,49 @@ export async function getSubstitutes(
   return res.json();
 }
 
+export type ChatTurn = {
+  role: "user" | "assistant";
+  text: string;
+};
+
+export type ChatStep = {
+  tool: string;
+  label: string;
+  ok: boolean;
+};
+
+export type ChatResponse = {
+  reply: string;
+  steps: ChatStep[];
+};
+
 export async function askAgent(
   userId: number,
   message: string,
-): Promise<{ reply: string }> {
-  const res = await fetch(`${API_BASE}/api/chat/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      user_id: userId,
-      message,
-    }),
-  });
+  history: ChatTurn[] = [],
+): Promise<ChatResponse> {
+  const res = await fetchWithTimeout(
+    `${API_BASE}/api/chat/`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id: userId,
+        message,
+        history,
+      }),
+    },
+    CHAT_TIMEOUT_MS,
+  );
 
   if (!res.ok) {
     throw new Error(`Chat failed: ${res.status}`);
   }
 
-  return res.json();
+  const data = await res.json();
+
+  return {
+    reply: data.reply,
+    steps: data.steps ?? [],
+  };
 }

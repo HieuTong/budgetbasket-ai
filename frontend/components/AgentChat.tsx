@@ -1,13 +1,22 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { askAgent } from "@/lib/api";
+import {
+  askAgent,
+  TimeoutError,
+  type ChatStep,
+  type ChatTurn,
+} from "@/lib/api";
+
+// How many earlier messages to send, so follow-ups like "what about bread?" make sense.
+const HISTORY_TURNS = 8;
 
 type Message = {
   id: number;
   role: "user" | "agent";
   text: string;
   error?: boolean;
+  steps?: ChatStep[];
 };
 
 // Each suggestion maps to something the assistant can actually do with its tools.
@@ -56,6 +65,15 @@ export default function AgentChat({ userId }: { userId: number }) {
     pending.current = true;
     const requestGeneration = generation.current;
 
+    // Earlier turns, oldest first. Failed replies are left out: they aren't real answers.
+    const history: ChatTurn[] = messages
+      .filter((message) => !message.error)
+      .slice(-HISTORY_TURNS)
+      .map((message) => ({
+        role: message.role === "user" ? "user" : "assistant",
+        text: message.text,
+      }));
+
     // Keep state updaters pure, including in React Strict Mode.
     const userMessage: Message = {
       id: ++messageId.current,
@@ -68,7 +86,7 @@ export default function AgentChat({ userId }: { userId: number }) {
     setSending(true);
 
     try {
-      const { reply } = await askAgent(userId, question);
+      const { reply, steps } = await askAgent(userId, question, history);
 
       if (generation.current !== requestGeneration) return;
 
@@ -76,17 +94,21 @@ export default function AgentChat({ userId }: { userId: number }) {
         id: ++messageId.current,
         role: "agent",
         text: reply,
+        steps,
       };
 
       setMessages((previous) => [...previous, replyMessage]);
-    } catch {
+    } catch (error) {
       if (generation.current !== requestGeneration) return;
 
       const errorMessage: Message = {
         id: ++messageId.current,
         role: "agent",
         error: true,
-        text: "Couldn't reach the assistant — check the backend is running.",
+        text:
+          error instanceof TimeoutError
+            ? "The assistant is taking longer than usual. Please try again in a moment."
+            : "Couldn't reach the assistant. Please try again shortly.",
       };
 
       setMessages((previous) => [...previous, errorMessage]);
@@ -141,6 +163,20 @@ export default function AgentChat({ userId }: { userId: number }) {
             >
               {message.text}
             </div>
+            {message.steps && message.steps.length > 0 && (
+              <ul className="bb-steps" aria-label="What the assistant did">
+                {message.steps.map((step, index) => (
+                  <li
+                    key={`${step.tool}-${index}`}
+                    className={step.ok ? undefined : "bb-step-failed"}
+                  >
+                    <span aria-hidden="true">{step.ok ? "✓" : "!"}</span>{" "}
+                    {step.label}
+                    {!step.ok && <span className="bb-sr-only"> (failed)</span>}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         ))}
 
