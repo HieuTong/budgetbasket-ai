@@ -10,6 +10,9 @@ from app.agent.tracing import AgentTrace, LLMCall, ToolCall
 from app.core.config import settings
 from app.ml.optimizer import BasketItem
 from app.services.basket import MAX_DISTINCT_PRODUCTS
+
+MAX_HISTORY_TURNS = 8
+MAX_TURN_CHARS = 1000
 from app.ml.similarity import Product
 
 SYSTEM_PROMPT = (
@@ -165,10 +168,11 @@ class BudgetAgent:
         db,
         max_steps: int = 5,
         trace: AgentTrace | None = None,
+        history: list[dict] | None = None,
     ) -> str:
         trace = trace if trace is not None else AgentTrace()
         started = time.perf_counter()
-        answer = self._run(user_message, context, db, max_steps, trace)
+        answer = self._run(user_message, context, db, max_steps, trace, history or [])
         trace.final_answer = answer
         trace.total_latency_s = round(time.perf_counter() - started, 3)
         return answer
@@ -180,8 +184,9 @@ class BudgetAgent:
         db,
         max_steps: int,
         trace: AgentTrace,
+        history: list[dict],
     ) -> str:
-        contents = [
+        contents = self._history_contents(history) + [
             types.Content(
                 role="user",
                 parts=[
@@ -374,6 +379,22 @@ class BudgetAgent:
             "Reached max reasoning steps "
             "without a final answer."
         )
+
+    @staticmethod
+    def _history_contents(history: list[dict]) -> list:
+        """Earlier turns, oldest first, so follow-ups like "what about bread?" make sense.
+
+        Only the last MAX_HISTORY_TURNS turns are kept, each capped in length: the history
+        comes from the browser, so it is treated as untrusted and bounded in size and cost.
+        """
+        turns = []
+        for turn in history[-MAX_HISTORY_TURNS:]:
+            text = str(turn.get("text", ""))[:MAX_TURN_CHARS].strip()
+            if not text:
+                continue
+            role = "model" if turn.get("role") == "assistant" else "user"
+            turns.append(types.Content(role=role, parts=[types.Part(text=text)]))
+        return turns
 
     @staticmethod
     def _prompt_context(context: dict) -> dict:

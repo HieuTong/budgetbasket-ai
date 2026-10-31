@@ -1176,3 +1176,48 @@ body {
     transition: none;
   }
 }
+
+
+/* Assistant steps and clickable basket items */
+
+.bb-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--font-bb-mono), monospace;
+  font-size: 9px;
+  color: var(--bb-green);
+}
+
+.bb-steps li {
+  padding: 2px 6px;
+  border: 1px solid var(--bb-line);
+  border-radius: 4px;
+  background: var(--bb-white);
+}
+
+.bb-steps .bb-step-failed {
+  color: var(--bb-danger);
+}
+
+.bb-item-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--bb-line);
+  text-underline-offset: 3px;
+}
+
+.bb-item-button:hover,
+.bb-item-button[aria-pressed="true"] {
+  color: var(--bb-green);
+  text-decoration-color: currentColor;
+}

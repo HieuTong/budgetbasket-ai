@@ -1,15 +1,20 @@
-import type { OptimizeResponse } from "@/lib/api";
+import type { BasketItem, OptimizeResponse } from "@/lib/api";
 
 type Props = {
   basket: OptimizeResponse | null;
   loading: boolean;
   budget: number;
+  // Lets each basket item open its buy-or-wait advice and cheaper swaps.
+  onSelectItem?: (item: BasketItem) => void;
+  selectedProductId?: number | null;
 };
 
 export default function BasketReceipt({
   basket,
   loading,
   budget,
+  onSelectItem,
+  selectedProductId = null,
 }: Props) {
   const remaining = basket ? budget - basket.total_cost : 0;
   const itemCount =
@@ -46,12 +51,25 @@ export default function BasketReceipt({
                 {basket.items.map((item, index) => (
                   <li
                     className="bb-leader"
-                    key={`${item.name}-${index}`}
+                    key={`${item.product_id ?? item.name}-${index}`}
                   >
-                    <span className="bb-item-name">
-                      <span className="bb-quantity">{item.qty} × </span>
-                      {item.name}
-                    </span>
+                    {onSelectItem ? (
+                      <button
+                        type="button"
+                        className="bb-item-name bb-item-button"
+                        aria-pressed={selectedProductId === item.product_id}
+                        aria-label={`${item.qty} × ${item.name}: see buy-or-wait advice and cheaper swaps`}
+                        onClick={() => onSelectItem(item)}
+                      >
+                        <span className="bb-quantity">{item.qty} × </span>
+                        {item.name}
+                      </button>
+                    ) : (
+                      <span className="bb-item-name">
+                        <span className="bb-quantity">{item.qty} × </span>
+                        {item.name}
+                      </span>
+                    )}
                     <span
                       className="bb-leader-fill"
                       aria-hidden="true"
@@ -65,6 +83,12 @@ export default function BasketReceipt({
             ) : (
               <p className="bb-empty">
                 No products were returned for this budget.
+              </p>
+            )}
+
+            {onSelectItem && basket.items.length > 0 && (
+              <p className="bb-card-footnote">
+                Select an item to see whether to buy now or wait, and cheaper swaps.
               </p>
             )}
 
