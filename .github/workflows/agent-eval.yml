@@ -1,0 +1,33 @@
+name: Agent evaluation
+
+# Live evaluation against the real model. It costs money and depends on an external API,
+# so it runs on demand and weekly, not on every push. Every push still runs the
+# deterministic evaluation tests in the main CI workflow.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 20 * * 0"   # Sundays 20:00 UTC
+
+jobs:
+  agent-eval:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run agent evaluation (fails the job if the gate fails)
+        run: python scripts/run_agent_eval.py --json-out agent_eval.json
+      - name: Upload traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-eval-traces
+          path: backend/agent_eval.json
