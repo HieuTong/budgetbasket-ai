@@ -16,6 +16,8 @@ jobs:
         working-directory: backend
     env:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      # Set explicitly so CI tests the same model as production, not a code default.
+      LLM_MODEL: ${{ vars.LLM_MODEL || 'gemini-3.1-flash-lite' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -24,7 +26,7 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
       - name: Run agent evaluation (fails the job if the gate fails)
-        run: python scripts/run_agent_eval.py --json-out agent_eval.json
+        run: python scripts/run_agent_eval.py --json-out agent_eval.json --pause 6
       - name: Upload traces
         if: always()
         uses: actions/upload-artifact@v4

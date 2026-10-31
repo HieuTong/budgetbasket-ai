@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 import statistics
+import time
 from dataclasses import dataclass, field
 
 from app.agent.tools import run_budget_optimizer_tool
@@ -78,6 +79,9 @@ class CaseResult:
 def check_case(case: EvalCase, trace: AgentTrace) -> CaseResult:
     called = set(trace.tools_called)
     failures = []
+    if not trace.llm_calls:
+        # No model call succeeded, so nothing about the agent's behaviour was tested.
+        failures.append("ERROR: the model never answered (check model name, API key or quota)")
     if not case.expected_tools <= called:
         failures.append(f"missing tools: {sorted(case.expected_tools - called)}")
     if case.forbidden_tools & called:
@@ -101,9 +105,12 @@ def check_case(case: EvalCase, trace: AgentTrace) -> CaseResult:
     return CaseResult(case.id, not failures, failures, trace)
 
 
-def run_eval(agent, cases: list[EvalCase] | None = None) -> list[CaseResult]:
+def run_eval(agent, cases: list[EvalCase] | None = None, pause_s: float = 0.0) -> list[CaseResult]:
+    """Run every case. `pause_s` spaces cases out to stay under per-minute rate limits."""
     results = []
-    for case in cases or default_cases():
+    for i, case in enumerate(cases or default_cases()):
+        if i and pause_s:
+            time.sleep(pause_s)
         trace = AgentTrace()
         context = {"user_id": 1, "candidates": CANDIDATES}
         agent.run(case.message, context, db=None, trace=trace)
@@ -125,6 +132,7 @@ def summarise(results: list[CaseResult]) -> dict:
         "cases": len(results),
         "pass_rate": round(sum(r.passed for r in results) / len(results), 3),
         "budget_violations": sum(any("BUDGET VIOLATION" in f for f in r.failures) for r in results),
+        "errors": sum(any(f.startswith("ERROR") for f in r.failures) for r in results),
         "latency_p50_s": _pct(lat, 50),
         "latency_p95_s": _pct(lat, 95),
         "avg_llm_calls": round(statistics.mean(len(r.trace.llm_calls) for r in results), 2),
@@ -137,6 +145,8 @@ def summarise(results: list[CaseResult]) -> dict:
 def gate(summary: dict, min_pass_rate: float = 0.9) -> list[str]:
     """Release gate: zero tolerance for budget violations, and a minimum pass rate."""
     problems = []
+    if summary.get("errors"):
+        problems.append(f"{summary['errors']} case(s) never got a model answer")
     if summary["budget_violations"]:
         problems.append(f"{summary['budget_violations']} budget violation(s)")
     if summary["pass_rate"] < min_pass_rate:

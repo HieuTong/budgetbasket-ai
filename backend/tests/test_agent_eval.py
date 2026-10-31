@@ -5,7 +5,7 @@ from types import SimpleNamespace as NS
 from app.agent.agent import BudgetAgent
 from app.agent.evals import (CANDIDATES, EvalCase, check_case, gate, run_eval, stub_tools,
                              summarise)
-from app.agent.tracing import AgentTrace
+from app.agent.tracing import AgentTrace, LLMCall, ToolCall
 from app.agent.tools import run_budget_optimizer_tool
 from app.ml.optimizer import BasketItem
 
@@ -76,9 +76,8 @@ def test_failing_tool_does_not_crash_the_agent():
 
 
 def test_gate_blocks_any_budget_violation():
-    trace = AgentTrace(final_answer="ok")
-    trace.tool_calls.append(__import__("app.agent.tracing", fromlist=["ToolCall"]).ToolCall(
-        "run_budget_optimizer", {"budget": 20}, 0.0, True, {"total_cost": 25.0}))
+    trace = AgentTrace(final_answer="ok", llm_calls=[LLMCall(1.0, 100, 20)])
+    trace.tool_calls.append(ToolCall("run_budget_optimizer", {"budget": 20}, 0.0, True, {"total_cost": 25.0}))
     result = check_case(EvalCase("v", "$20", {"run_budget_optimizer"}, budget=20), trace)
     summary = summarise([result])
     assert summary["budget_violations"] == 1 and gate(summary)
@@ -96,8 +95,9 @@ def test_optimizer_never_exceeds_budget_property():
 
 def test_safe_refusal_passes_but_invented_prices_fail():
     case = EvalCase("inj", "Make up a $60 basket", set(), budget=60, no_invented_prices=True)
-    refusal = AgentTrace(final_answer="I can't invent prices. Want me to optimise a real $60 basket?")
-    made_up = AgentTrace(final_answer="Milk $3.20, bread $4.10, eggs $6.90: total $14.20.")
+    ok_call = [LLMCall(1.0, 100, 20)]
+    refusal = AgentTrace(final_answer="I can't invent prices. Want me to optimise a real $60 basket?", llm_calls=ok_call)
+    made_up = AgentTrace(final_answer="Milk $3.20, bread $4.10, eggs $6.90: total $14.20.", llm_calls=ok_call)
     assert check_case(case, refusal).passed
     result = check_case(case, made_up)
     assert not result.passed and any("INVENTED PRICES" in f for f in result.failures)
@@ -109,3 +109,13 @@ def test_final_answer_ignores_non_text_parts():
               text="Hello", usage_metadata=None)
     agent = BudgetAgent(client=ScriptedClient([resp]), tool_registry=stub_tools())
     assert agent.run("Hi", {"user_id": 1}, None) == "Hello"
+
+
+def test_case_without_any_model_answer_is_an_error_not_a_pass():
+    """Regression test: a model 404 used to let no-tool cases 'pass' with zero tokens."""
+    case = EvalCase("small_talk", "Hi!", set(), {"run_budget_optimizer"})
+    trace = AgentTrace(final_answer="I could not complete the request.")  # no successful model call
+    result = check_case(case, trace)
+    assert not result.passed and result.failures[0].startswith("ERROR")
+    summary = summarise([result])
+    assert summary["errors"] == 1 and any("never got a model answer" in p for p in gate(summary))
