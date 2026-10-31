@@ -12,3 +12,5 @@ data/
 *.tsbuildinfo
 backups/
 .env.local
+backend/eval_*.json
+backend/agent_eval.json
