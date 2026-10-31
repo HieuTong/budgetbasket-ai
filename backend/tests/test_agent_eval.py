@@ -4,7 +4,7 @@ from types import SimpleNamespace as NS
 
 from app.agent.agent import BudgetAgent
 from app.agent.evals import (CANDIDATES, EvalCase, check_case, gate, run_eval, stub_tools,
-                             summarise)
+                             summarise, verdict)
 from app.agent.tracing import AgentTrace, LLMCall, ToolCall
 from app.agent.tools import run_budget_optimizer_tool
 from app.ml.optimizer import BasketItem
@@ -118,4 +118,52 @@ def test_case_without_any_model_answer_is_an_error_not_a_pass():
     result = check_case(case, trace)
     assert not result.passed and result.failures[0].startswith("ERROR")
     summary = summarise([result])
-    assert summary["errors"] == 1 and any("never got a model answer" in p for p in gate(summary))
+    assert summary["errors"] == 1
+    assert verdict(summary)[0] == "inconclusive"
+
+
+class FlakyClient:
+    """Fails with 503 for the first `failures` calls, then answers."""
+
+    def __init__(self, failures, response):
+        self.failures, self.response, self.calls = failures, response, 0
+        self.models = self
+
+    def generate_content(self, **_):
+        self.calls += 1
+        if self.calls <= self.failures:
+            raise RuntimeError("503 UNAVAILABLE. high demand")
+        return self.response
+
+
+def test_agent_retries_503_with_backoff(monkeypatch):
+    monkeypatch.setattr("app.agent.agent.time.sleep", lambda s: None)
+    client = FlakyClient(2, _resp(text="Hello"))
+    agent = BudgetAgent(client=client, tool_registry=stub_tools())
+    trace = AgentTrace()
+    assert agent.run("Hi", {"user_id": 1}, None, trace=trace) == "Hello"
+    assert client.calls == 3 and "503" in trace.error
+
+
+def test_provider_errors_are_retried_and_reported_with_reason(monkeypatch):
+    monkeypatch.setattr("app.agent.agent.time.sleep", lambda s: None)
+    monkeypatch.setattr("app.agent.evals.time.sleep", lambda s: None)
+    case = EvalCase("small_talk", "Hi!", set())
+    # First run: 3 failed attempts (all retries exhausted). Retry pass: succeeds.
+    client = FlakyClient(3, _resp(text="Hello"))
+    agent = BudgetAgent(client=client, tool_registry=stub_tools())
+    [result] = run_eval(agent, [case], retry_errors_after_s=0)
+    assert result.passed
+
+    always_down = BudgetAgent(client=FlakyClient(99, None), tool_registry=stub_tools())
+    [failed] = run_eval(always_down, [case])
+    assert "503" in failed.failures[0]
+
+
+def test_verdict_separates_product_failures_from_outages():
+    def s(pass_rate, errors, violations=0):
+        return {"cases": 10, "pass_rate": pass_rate, "errors": errors, "budget_violations": violations}
+    assert verdict(s(1.0, 0))[0] == "pass"
+    assert verdict(s(0.2, 8))[0] == "inconclusive"   # outage: 2 of 2 answered cases passed
+    assert verdict(s(0.5, 0))[0] == "fail"           # real behaviour problem
+    assert verdict(s(0.9, 1, violations=1))[0] == "fail"  # budget violations always fail

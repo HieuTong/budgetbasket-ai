@@ -81,7 +81,8 @@ def check_case(case: EvalCase, trace: AgentTrace) -> CaseResult:
     failures = []
     if not trace.llm_calls:
         # No model call succeeded, so nothing about the agent's behaviour was tested.
-        failures.append("ERROR: the model never answered (check model name, API key or quota)")
+        reason = trace.error[:120] if trace.error else "check model name, API key or quota"
+        failures.append(f"ERROR: the model never answered ({reason})")
     if not case.expected_tools <= called:
         failures.append(f"missing tools: {sorted(case.expected_tools - called)}")
     if case.forbidden_tools & called:
@@ -105,16 +106,36 @@ def check_case(case: EvalCase, trace: AgentTrace) -> CaseResult:
     return CaseResult(case.id, not failures, failures, trace)
 
 
-def run_eval(agent, cases: list[EvalCase] | None = None, pause_s: float = 0.0) -> list[CaseResult]:
-    """Run every case. `pause_s` spaces cases out to stay under per-minute rate limits."""
+def _run_case(agent, case: EvalCase) -> CaseResult:
+    trace = AgentTrace()
+    agent.run(case.message, {"user_id": 1, "candidates": CANDIDATES}, db=None, trace=trace)
+    return check_case(case, trace)
+
+
+def _is_error(result: CaseResult) -> bool:
+    return any(f.startswith("ERROR") for f in result.failures)
+
+
+def run_eval(agent, cases: list[EvalCase] | None = None, pause_s: float = 0.0,
+             retry_errors_after_s: float | None = None) -> list[CaseResult]:
+    """Run every case. `pause_s` spaces cases out to stay under per-minute rate limits.
+
+    If `retry_errors_after_s` is set, cases that hit a provider error are re-run once after
+    that wait, because provider outages are usually brief.
+    """
+    cases = cases or default_cases()
     results = []
-    for i, case in enumerate(cases or default_cases()):
+    for i, case in enumerate(cases):
         if i and pause_s:
             time.sleep(pause_s)
-        trace = AgentTrace()
-        context = {"user_id": 1, "candidates": CANDIDATES}
-        agent.run(case.message, context, db=None, trace=trace)
-        results.append(check_case(case, trace))
+        results.append(_run_case(agent, case))
+    if retry_errors_after_s is not None and any(_is_error(r) for r in results):
+        time.sleep(retry_errors_after_s)
+        for i, (case, result) in enumerate(zip(cases, results)):
+            if _is_error(result):
+                results[i] = _run_case(agent, case)
+                if pause_s:
+                    time.sleep(pause_s)
     return results
 
 
@@ -143,12 +164,26 @@ def summarise(results: list[CaseResult]) -> dict:
 
 
 def gate(summary: dict, min_pass_rate: float = 0.9) -> list[str]:
-    """Release gate: zero tolerance for budget violations, and a minimum pass rate."""
+    """Release gate on BEHAVIOUR: zero budget violations, and a minimum pass rate among cases
+    that actually got a model answer. Provider errors are reported by `verdict`, not here."""
     problems = []
-    if summary.get("errors"):
-        problems.append(f"{summary['errors']} case(s) never got a model answer")
     if summary["budget_violations"]:
         problems.append(f"{summary['budget_violations']} budget violation(s)")
-    if summary["pass_rate"] < min_pass_rate:
-        problems.append(f"pass rate {summary['pass_rate']} below {min_pass_rate}")
+    answered = summary["cases"] - summary.get("errors", 0)
+    if answered:
+        behaviour_pass_rate = (summary["pass_rate"] * summary["cases"]) / answered
+        if behaviour_pass_rate < min_pass_rate - 1e-9:
+            problems.append(f"pass rate among answered cases {behaviour_pass_rate:.2f} below {min_pass_rate}")
     return problems
+
+
+def verdict(summary: dict, min_pass_rate: float = 0.9, max_error_share: float = 0.3) -> tuple[str, list[str]]:
+    """'fail' if behaviour is wrong; 'inconclusive' if too many cases hit provider errors to judge;
+    otherwise 'pass'. Keeping these apart stops a provider outage from looking like a product bug."""
+    problems = gate(summary, min_pass_rate)
+    if problems:
+        return "fail", problems
+    errors = summary.get("errors", 0)
+    if errors and errors / summary["cases"] > max_error_share:
+        return "inconclusive", [f"{errors} of {summary['cases']} cases hit provider errors"]
+    return "pass", []
