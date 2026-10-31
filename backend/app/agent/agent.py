@@ -21,6 +21,12 @@ SYSTEM_PROMPT = (
     "call the make_product_decision tool. Do not make the BUY, WAIT, SUBSTITUTE, or NO_ACTION decision yourself.\n\n"
     "When the user asks for cheaper alternatives or substitution advice, call find_substitutes.\n\n"
     "When the user asks how to save money or wants savings advice, call retrieve_savings_tips.\n\n"
+    "When the user names a product (for example 'milk') instead of giving a product ID, call "
+    "find_products first and use the product_id it returns. If several products match, use the "
+    "closest match and say which one you used.\n\n"
+    "When the user asks how a price has changed or why something costs more, call "
+    "explain_price_trend. Describe what the data shows. Never invent reasons such as inflation "
+    "or supply problems: the data shows what changed, not why.\n\n"
     "When multiple requested tools are independent, request all relevant tools in the same response "
     "instead of waiting for one tool result before requesting another.\n\n"
     "For example, if the user asks for a purchasing decision and cheaper substitutes, call "
@@ -82,6 +88,39 @@ TOOLS = [
                         "product_id": {
                             "type": "INTEGER",
                             "description": "Database product ID.",
+                        },
+                    },
+                    "required": ["product_id"],
+                },
+            ),
+            types.FunctionDeclaration(
+                name="find_products",
+                description=(
+                    "Search the catalogue by name and return matching products "
+                    "with their product_id and price."
+                ),
+                parameters={
+                    "type": "OBJECT",
+                    "properties": {
+                        "query": {
+                            "type": "STRING",
+                            "description": "Product name, e.g. 'milk' or 'wholemeal bread'.",
+                        },
+                    },
+                    "required": ["query"],
+                },
+            ),
+            types.FunctionDeclaration(
+                name="explain_price_trend",
+                description=(
+                    "Recent price history and trend for one product, "
+                    "from historical transaction data."
+                ),
+                parameters={
+                    "type": "OBJECT",
+                    "properties": {
+                        "product_id": {
+                            "type": "INTEGER",
                         },
                     },
                     "required": ["product_id"],
@@ -370,7 +409,7 @@ class BudgetAgent:
                 "max_distinct_products": MAX_DISTINCT_PRODUCTS,
             }
 
-        if fn_name == "find_substitutes":
+        if fn_name in ("find_substitutes", "find_products", "explain_price_trend"):
             return {
                 "db": db,
             }

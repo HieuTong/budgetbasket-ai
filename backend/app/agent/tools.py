@@ -4,7 +4,9 @@ from app.ml.forecasting import PricePoint, price_trend
 from app.ml.optimizer import BasketItem, optimize_basket
 from app.ml.similarity import Product, SimilarityIndex
 from app.rag.retriever import Retriever
+from app.services.catalog import list_catalog
 from app.services.decision import make_product_decision
+from app.services.price_trend import load_price_trend, summarise_for_assistant
 
 _retriever = Retriever()
 
@@ -146,7 +148,27 @@ def make_product_decision_tool(
     return response
 
 
+def find_products_tool(query: str, db, limit: int = 5) -> list[dict]:
+    """Turn a product name the user typed ("milk") into catalogue products with IDs."""
+    return [
+        {"product_id": p["product_id"], "name": p["name"], "brand": p["brand"], "price": p["price"]}
+        for p in list_catalog(db, search=query, limit=limit)
+    ]
+
+
+def explain_price_trend_tool(product_id: int, db) -> dict:
+    trend = load_price_trend(db, product_id)
+    if trend is None:
+        return {"error": f"Product {product_id} not found."}
+    if not trend.points:
+        return {"product_id": product_id, "product_name": trend.product.name,
+                "error": "No price history is available for this product."}
+    return summarise_for_assistant(trend)
+
+
 TOOL_REGISTRY = {
+    "find_products": find_products_tool,
+    "explain_price_trend": explain_price_trend_tool,
     "run_budget_optimizer": run_budget_optimizer_tool,
     "find_substitutes": find_substitutes_tool,
     "check_price_trend": check_price_trend_tool,
