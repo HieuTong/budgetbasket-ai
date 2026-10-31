@@ -7,4 +7,8 @@ node_modules/
 .next/
 data/
 *.egg-info/
-./DEPLOYMENT.md
+
+*.bak
+*.tsbuildinfo
+backups/
+.env.local
