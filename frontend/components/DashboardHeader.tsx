@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { checkHealth } from "@/lib/api";
 
 type Props = {
   totalCost: number | null;
@@ -32,13 +33,18 @@ export default function DashboardHeader({
   stale = false,
 }: Props) {
   const [week, setWeek] = useState("This week");
+  const [online, setOnline] = useState<boolean | null>(null);
 
   useEffect(() => {
     setWeek(formatCurrentWeek());
+    // Say so up front if the server is down, instead of letting every feature fail one by one.
+    checkHealth().then(setOnline);
   }, []);
 
   const status =
-    totalCost === null
+    online === false
+      ? "Can't reach the server"
+      : totalCost === null
       ? "Ready to plan"
       : stale
         ? "Budget changed"
@@ -48,6 +54,7 @@ export default function DashboardHeader({
 
   const overBudget =
     totalCost !== null && !stale && totalCost > budget;
+  const warning = overBudget || online === false;
 
   return (
     <header>
@@ -91,7 +98,7 @@ export default function DashboardHeader({
 
         <div className="bb-week-info">
           <span
-            className={`bb-status${overBudget ? " bb-status-warning" : ""}`}
+            className={`bb-status${warning ? " bb-status-warning" : ""}`}
             role="status"
           >
             <span aria-hidden="true" />

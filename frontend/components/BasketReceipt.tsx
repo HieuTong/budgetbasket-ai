@@ -33,7 +33,7 @@ export default function BasketReceipt({
         </div>
 
         <div className="bb-receipt-meta">
-          <span>WEEKLY SHOP</span>
+          <span>Weekly shop</span>
           <span>{itemCount} items</span>
         </div>
 
@@ -109,16 +109,24 @@ export default function BasketReceipt({
               </div>
             </dl>
 
-            <div className="bb-utility">
-              <span>Basket utility</span>
-              <span className="bb-mono">
-                {basket.total_utility.toFixed(2)}
-              </span>
+            <div className="bb-budget-meter">
+              <progress
+                max={budget}
+                value={Math.min(basket.total_cost, budget)}
+                aria-label={`${Math.round((basket.total_cost / budget) * 100)}% of your budget used`}
+                className={remaining < 0 ? "bb-meter-over" : undefined}
+              />
+              <p className="bb-micro">
+                {remaining < 0
+                  ? `$${Math.abs(remaining).toFixed(2)} over your budget`
+                  : `${Math.round((basket.total_cost / budget) * 100)}% of your budget used`}
+              </p>
             </div>
           </>
         ) : (
           <p className="bb-empty">
-            Set a budget and optimize your basket.
+            Pick a weekly budget, then build your basket. It's filled with the
+            products you usually buy.
           </p>
         )}
       </div>

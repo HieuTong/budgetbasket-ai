@@ -2,6 +2,9 @@
 
 import { useId } from "react";
 
+// Common weekly budgets, one tap away.
+const PRESETS = [60, 85, 120];
+
 type Props = {
   budget: number;
   onChange: (value: number) => void;
@@ -27,7 +30,7 @@ export default function BudgetSlider({
         <label htmlFor={id} className="bb-section-title">
           weekly budget
         </label>
-        <span className="bb-micro">$5 steps</span>
+
       </div>
 
       <div className="bb-budget-value">
@@ -54,6 +57,20 @@ export default function BudgetSlider({
         <span>${max}</span>
       </div>
 
+      <div className="bb-presets" role="group" aria-label="Quick budgets">
+        {PRESETS.map((value) => (
+          <button
+            key={value}
+            type="button"
+            aria-pressed={budget === value}
+            disabled={loading}
+            onClick={() => onChange(value)}
+          >
+            ${value}
+          </button>
+        ))}
+      </div>
+
       <button
         className="bb-button bb-button-wide"
         type="button"
@@ -61,7 +78,7 @@ export default function BudgetSlider({
         disabled={loading}
       >
         <span aria-hidden="true">✧</span>
-        {loading ? "Optimizing…" : "Optimize basket"}
+        {loading ? "Building your basket…" : `Build my $${budget} basket`}
       </button>
     </div>
   );

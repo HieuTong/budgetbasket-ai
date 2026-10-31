@@ -99,6 +99,16 @@ export type SubstitutesResponse = {
   results: Substitute[];
 };
 
+// True if the backend answers its health check within a few seconds.
+export async function checkHealth(): Promise<boolean> {
+  try {
+    const res = await fetchWithTimeout(`${API_BASE}/health`, {}, 5_000);
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 export async function optimizeBasket(
   userId: number,
   budget: number,

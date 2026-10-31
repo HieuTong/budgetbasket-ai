@@ -1221,3 +1221,105 @@ body {
   color: var(--bb-green);
   text-decoration-color: currentColor;
 }
+
+
+/* UX pass: readable small text, budget presets, budget meter, plain-language verdicts */
+
+/* Nothing below 11px: the smallest labels were 8-10px, hard to read on phones. */
+.bb-micro,
+.bb-quantity,
+.bb-badge,
+.bb-best-value,
+.bb-savings,
+.bb-card-footnote,
+.bb-message-label,
+.bb-range-limits,
+.bb-steps {
+  font-size: 11px;
+}
+
+.bb-presets {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.bb-presets button {
+  flex: 1;
+  min-height: 36px;
+  border: 1px solid var(--bb-line);
+  border-radius: 6px;
+  background: var(--bb-white);
+  color: var(--bb-ink);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.bb-presets button[aria-pressed="true"] {
+  border-color: var(--bb-green);
+  background: var(--bb-pale);
+  color: var(--bb-green);
+}
+
+.bb-presets button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.bb-budget-meter {
+  margin-top: 14px;
+}
+
+.bb-budget-meter progress {
+  width: 100%;
+  height: 8px;
+  appearance: none;
+  border: 0;
+  border-radius: 4px;
+  background: var(--bb-track);
+  overflow: hidden;
+}
+
+.bb-budget-meter progress::-webkit-progress-bar {
+  background: var(--bb-track);
+}
+
+.bb-budget-meter progress::-webkit-progress-value {
+  background: var(--bb-green);
+}
+
+.bb-budget-meter progress::-moz-progress-bar {
+  background: var(--bb-green);
+}
+
+.bb-budget-meter progress.bb-meter-over::-webkit-progress-value {
+  background: var(--bb-danger);
+}
+
+.bb-budget-meter progress.bb-meter-over::-moz-progress-bar {
+  background: var(--bb-danger);
+}
+
+.bb-decision-hint {
+  margin-top: 10px !important;
+  font-size: 13px;
+}
+
+/* Review of the first screenshot */
+
+/* Space between the budget presets and the main button. */
+.bb-presets {
+  margin-bottom: 16px;
+}
+
+/* The main action reads as a button, not as code: sans-serif, normal size. */
+.bb-button {
+  font-family: inherit !important;
+  font-size: 13px !important;
+}
+
+.bb-retry {
+  min-height: 32px;
+  margin-top: 4px;
+}

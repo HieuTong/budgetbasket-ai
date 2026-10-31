@@ -48,7 +48,7 @@ export default function Home() {
       setBasketBudget(requestedBudget);
     } catch {
       setError(
-        "Couldn't optimize your basket. Check your connection and try again.",
+        "Couldn't build your basket. Check your connection and try again.",
       );
     } finally {
       optimizing.current = false;
@@ -99,8 +99,8 @@ export default function Home() {
 
             {basketIsStale && (
               <p className="bb-notice" role="status">
-                This basket was optimized for ${basketBudget?.toFixed(0)}.
-                Optimize again to use your new budget.
+                This basket was built for ${basketBudget?.toFixed(0)}. Build it
+                again to use your new budget.
               </p>
             )}
           </div>

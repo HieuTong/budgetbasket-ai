@@ -15,12 +15,22 @@ type RequestState = {
   data: DecisionResponse | null;
 };
 
-const LABELS: Record<string, string> = {
-  BUY: "BUY",
-  WAIT: "WAIT",
-  SUBSTITUTE: "SUBSTITUTE",
-  NO_ACTION: "NO ACTION",
+// Plain-language verdicts instead of internal codes like NO_ACTION.
+const VERDICTS: Record<string, { title: string; hint: string }> = {
+  BUY: { title: "Buy now", hint: "The price isn't expected to drop soon." },
+  WAIT: { title: "Wait if you can", hint: "The price is likely to drop soon." },
+  SUBSTITUTE: { title: "Consider a swap", hint: "A cheaper similar product is available." },
+  NO_ACTION: {
+    title: "No clear signal",
+    hint: "There isn't enough price history to call it. Buy as you normally would.",
+  },
 };
+
+function confidenceLabel(confidence: number): string {
+  if (confidence >= 0.75) return "High confidence";
+  if (confidence >= 0.5) return "Medium confidence";
+  return "Low confidence";
+}
 
 export default function DecisionCard({
   productId,
@@ -103,7 +113,7 @@ export default function DecisionCard({
         </div>
       ) : current?.status === "error" || !decision ? (
         <div className="bb-empty">
-          <p role="alert">Decision unavailable.</p>
+          <p role="alert">Couldn't load advice for this product.</p>
           <button
             type="button"
             className="bb-text-button"
@@ -121,17 +131,21 @@ export default function DecisionCard({
 
             <div className="bb-decision-status">
               <span className="bb-badge">
-                {LABELS[decision.decision] ?? decision.decision}
+                {VERDICTS[decision.decision]?.title ?? decision.decision}
               </span>
 
               {decision.confidence > 0 && (
                 <span className="bb-micro">
-                  {(decision.confidence * 100).toFixed(0)}% confidence
+                  {confidenceLabel(decision.confidence)} (
+                  {(decision.confidence * 100).toFixed(0)}%)
                 </span>
               )}
             </div>
           </div>
 
+          {VERDICTS[decision.decision] && (
+            <p className="bb-decision-hint">{VERDICTS[decision.decision].hint}</p>
+          )}
           <p className="bb-decision-reason">{decision.reason}</p>
 
           {probabilities && (

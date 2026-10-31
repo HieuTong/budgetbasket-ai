@@ -102,7 +102,7 @@ export default function SubstituteCard({
         </div>
       ) : current?.status === "error" || !data ? (
         <div className="bb-empty">
-          <p role="alert">Alternatives unavailable.</p>
+          <p role="alert">Couldn't load cheaper swaps.</p>
           <button
             className="bb-text-button"
             type="button"
@@ -112,7 +112,9 @@ export default function SubstituteCard({
           </button>
         </div>
       ) : data.results.length === 0 ? (
-        <p className="bb-empty">No cheaper alternatives found.</p>
+        <p className="bb-empty">
+          This is already the cheapest similar product in your catalogue.
+        </p>
       ) : (
         <>
           <ul className="bb-substitute-list">
@@ -124,7 +126,7 @@ export default function SubstituteCard({
                       {item.product_name}
                       {index === 0 && (
                         <span className="bb-best-value">
-                          TOP MATCH
+                          Closest match
                         </span>
                       )}
                     </h3>
