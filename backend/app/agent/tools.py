@@ -16,8 +16,9 @@ def get_purchase_history_tool(user_id: int, db) -> list[dict]:
 def run_budget_optimizer_tool(
     candidates: list[BasketItem],
     budget: float,
+    max_distinct_products: int | None = None,
 ) -> dict:
-    result = optimize_basket(candidates, budget)
+    result = optimize_basket(candidates, budget, max_distinct_products=max_distinct_products)
 
     return {
         "items": [

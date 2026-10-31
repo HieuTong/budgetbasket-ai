@@ -44,7 +44,7 @@ python scripts/run_agent_eval.py --json-out agent_eval.json  # live agent evalua
 ## Known limitations
 
 - **Synthetic price data** in the backtest. Real observations (via `open_prices_client.py` or a public Australian price dataset) are needed before any savings claim.
-- **The chat route does not yet pass the user's candidate products to the optimiser**, so basket optimisation through the live chat returns an empty basket. The agent evaluation supplies candidates directly, which is why it did not catch this; an end-to-end test through the API route is planned.
+- **Fixed:** the chat route used to send the optimiser an empty product list, so basket requests in the live chat returned nothing. The agent evaluation supplied products itself, so it never caught this. The basket page and chat now share one candidate-building function, and end-to-end tests through the real API routes cover it.
 - **The agent evaluation uses stubbed database tools** (the optimiser is real) and has only 10 cases, so one case moves the pass rate by 10 points.
 
 ## Why this project
@@ -289,7 +289,6 @@ Useful next steps include:
 - Connect real purchase history from PostgreSQL to the optimizer's utility scoring.
 - Run the backtest on real Australian price observations.
 - Connect the specials-timing model to the live BUY/WAIT decision once it is validated on real data.
-- Pass the user's candidate products from the chat route to the optimiser, with an end-to-end test.
 - Fix or remove `app/services/decision_utility.py`, which shares the old inverted WAIT logic and is unused.
 - Grow the agent evaluation set and report infrastructure errors (such as rate limits) separately from behaviour failures.
 - Expand search relevance evaluation with a larger query set and human-judged relevance labels.
