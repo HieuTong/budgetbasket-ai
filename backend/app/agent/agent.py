@@ -1,9 +1,11 @@
 import json
+import os
 import time
 from google import genai
 from google.genai import types
 
 from app.agent.tools import TOOL_REGISTRY
+from app.agent.tracing import AgentTrace, LLMCall, ToolCall
 from app.core.config import settings
 from app.ml.optimizer import BasketItem
 from app.ml.similarity import Product
@@ -105,10 +107,15 @@ TOOLS = [
 
 
 class BudgetAgent:
-    def __init__(self):
-        self.client = genai.Client(
-            api_key=settings.GEMINI_API_KEY
+    def __init__(self, client=None, tool_registry: dict | None = None):
+        # Injecting the client and tools lets tests and evaluations run without network calls.
+        # A hard timeout per model call stops one slow request from hanging for a minute or more.
+        timeout_ms = int(float(os.getenv("AGENT_LLM_TIMEOUT_S", "30")) * 1000)
+        self.client = client or genai.Client(
+            api_key=settings.GEMINI_API_KEY,
+            http_options=types.HttpOptions(timeout=timeout_ms),
         )
+        self.tool_registry = tool_registry or TOOL_REGISTRY
 
     def run(
         self,
@@ -116,6 +123,22 @@ class BudgetAgent:
         context: dict,
         db,
         max_steps: int = 5,
+        trace: AgentTrace | None = None,
+    ) -> str:
+        trace = trace if trace is not None else AgentTrace()
+        started = time.perf_counter()
+        answer = self._run(user_message, context, db, max_steps, trace)
+        trace.final_answer = answer
+        trace.total_latency_s = round(time.perf_counter() - started, 3)
+        return answer
+
+    def _run(
+        self,
+        user_message: str,
+        context: dict,
+        db,
+        max_steps: int,
+        trace: AgentTrace,
     ) -> str:
         contents = [
             types.Content(
@@ -131,6 +154,8 @@ class BudgetAgent:
             )
         ]
 
+        # Optional: limit "thinking" for fast tool routing. Unset = the model's default.
+        thinking_budget = os.getenv("AGENT_THINKING_BUDGET")
         config = types.GenerateContentConfig(
             system_instruction=SYSTEM_PROMPT,
             tools=TOOLS,
@@ -139,6 +164,11 @@ class BudgetAgent:
                     disable=True
                 )
             ),
+            thinking_config=(
+                types.ThinkingConfig(thinking_budget=int(thinking_budget))
+                if thinking_budget is not None
+                else None
+            ),
         )
 
         for _ in range(max_steps):
@@ -146,11 +176,18 @@ class BudgetAgent:
 
             for attempt in range(2):
                 try:
+                    call_started = time.perf_counter()
                     resp = self.client.models.generate_content(
                         model=settings.LLM_MODEL,
                         contents=contents,
                         config=config,
                     )
+                    usage = getattr(resp, "usage_metadata", None)
+                    trace.llm_calls.append(LLMCall(
+                        latency_s=round(time.perf_counter() - call_started, 3),
+                        prompt_tokens=int(getattr(usage, "prompt_token_count", 0) or 0),
+                        output_tokens=int(getattr(usage, "candidates_token_count", 0) or 0),
+                    ))
                     break
                 except Exception as exc:
                     error_text = str(exc)
@@ -164,7 +201,13 @@ class BudgetAgent:
                             "Please try again after the quota resets."
                         )
 
-                    if "503" not in error_text:
+                    retryable = (
+                        "503" in error_text
+                        or "timed out" in error_text.lower()
+                        or "timeout" in type(exc).__name__.lower()
+                    )
+
+                    if not retryable:
                         print(
                             f"[Agent] Gemini request failed: {exc}"
                         )
@@ -198,12 +241,17 @@ class BudgetAgent:
             ]
 
             if not function_calls:
-                return resp.text or ""
+                # Join text parts ourselves: thinking models also return non-text parts.
+                return "".join(
+                    part.text
+                    for part in candidate.content.parts
+                    if getattr(part, "text", None)
+                )
 
             response_parts = []
 
             for call in function_calls:
-                tool_fn = TOOL_REGISTRY.get(call.name)
+                tool_fn = self.tool_registry.get(call.name)
                 args = (
                     dict(call.args)
                     if call.args
@@ -224,10 +272,24 @@ class BudgetAgent:
                         f"[Agent] Args: {args}"
                     )
 
-                    result = tool_fn(
-                        **args,
-                        **extra_args,
-                    )
+                    tool_started = time.perf_counter()
+                    try:
+                        result = tool_fn(
+                            **args,
+                            **extra_args,
+                        )
+                        ok = True
+                    except Exception as exc:
+                        # A failing tool must not crash the request: report it to the model and the trace.
+                        result = {"error": f"{call.name} failed: {exc}"}
+                        ok = False
+                    trace.tool_calls.append(ToolCall(
+                        name=call.name,
+                        args=args,
+                        latency_s=round(time.perf_counter() - tool_started, 3),
+                        ok=ok,
+                        result=result,
+                    ))
 
                     if isinstance(result, dict):
                         print(
@@ -241,6 +303,9 @@ class BudgetAgent:
                     result = {
                         "error": "unknown tool"
                     }
+                    trace.tool_calls.append(ToolCall(
+                        name=call.name, args=args, latency_s=0.0, ok=False, result=result,
+                    ))
 
                 response_parts.append(
                     types.Part.from_function_response(
