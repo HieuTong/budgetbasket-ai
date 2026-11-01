@@ -1323,3 +1323,84 @@ body {
   min-height: 32px;
   margin-top: 4px;
 }
+
+/* Editable basket: quantity controls, add and swap buttons */
+
+.bb-receipt-line {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--bb-soft);
+}
+
+.bb-receipt-line .bb-leader {
+  padding-bottom: 4px;
+  border-bottom: 0;
+}
+
+.bb-line-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--bb-muted);
+}
+
+.bb-line-note {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.bb-stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--bb-line);
+  border-radius: 6px;
+  background: var(--bb-white);
+}
+
+.bb-stepper button {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  background: none;
+  color: var(--bb-ink);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.bb-stepper button:disabled {
+  color: var(--bb-line);
+  cursor: not-allowed;
+}
+
+.bb-stepper span {
+  min-width: 22px;
+  text-align: center;
+  color: var(--bb-ink);
+  font-size: 13px;
+}
+
+.bb-line-remove {
+  min-height: 32px;
+  font-size: 11px;
+}
+
+.bb-card-actions {
+  margin-top: 16px;
+}
+
+/* Secondary action: clearly a button, but quieter than "Build my basket". */
+.bb-button-secondary {
+  background: var(--bb-white);
+  color: var(--bb-green);
+  border: 1px solid var(--bb-green);
+}
+
+.bb-button-secondary:hover {
+  background: var(--bb-pale);
+}
+
+.bb-substitute-action {
+  min-height: 36px;
+  margin-top: 10px;
+}

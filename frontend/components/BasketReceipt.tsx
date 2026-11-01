@@ -1,109 +1,146 @@
-import type { BasketItem, OptimizeResponse } from "@/lib/api";
+import { MAX_QTY, type BasketLine } from "@/lib/basket";
 
 type Props = {
-  basket: OptimizeResponse | null;
+  lines: BasketLine[] | null;
+  total: number | null;
   loading: boolean;
   budget: number;
-  // Lets each basket item open its buy-or-wait advice and cheaper swaps.
-  onSelectItem?: (item: BasketItem) => void;
+  // A short description of the last change, announced to screen readers.
+  lastChange: string;
+  onSelectLine: (line: BasketLine) => void;
+  onChangeQty: (productId: number, delta: number) => void;
+  onRemove: (productId: number) => void;
+  onClear: () => void;
   selectedProductId?: number | null;
 };
 
 export default function BasketReceipt({
-  basket,
+  lines,
+  total,
   loading,
   budget,
-  onSelectItem,
+  lastChange,
+  onSelectLine,
+  onChangeQty,
+  onRemove,
+  onClear,
   selectedProductId = null,
 }: Props) {
-  const remaining = basket ? budget - basket.total_cost : 0;
-  const itemCount =
-    basket?.items.reduce((sum, item) => sum + item.qty, 0) ?? 0;
+  const spent = total ?? 0;
+  const remaining = budget - spent;
+  const itemCount = lines?.reduce((sum, line) => sum + line.qty, 0) ?? 0;
+  const usedPercent = budget > 0 ? Math.round((spent / budget) * 100) : 0;
 
   return (
     <section className="bb-receipt-shell" aria-label="Your basket">
       <div className="bb-receipt" aria-busy={loading}>
         <div className="bb-section-heading">
           <h2 className="bb-section-title">your basket</h2>
-          {basket && (
-            <span className="bb-micro">
-              {basket.items.length} products
-            </span>
+          {lines && lines.length > 0 && (
+            <button type="button" className="bb-text-button" onClick={onClear}>
+              Clear
+            </button>
           )}
         </div>
 
         <div className="bb-receipt-meta">
           <span>Weekly shop</span>
-          <span>{itemCount} items</span>
+          <span>
+            {itemCount} {itemCount === 1 ? "item" : "items"}
+          </span>
         </div>
+
+        {/* Announces "Added milk." and similar changes without moving focus. */}
+        <p className="bb-sr-only" role="status" aria-live="polite">
+          {lastChange}
+        </p>
 
         {loading ? (
           <div className="bb-skeleton-group" role="status">
-            <span className="bb-sr-only">Optimizing your basket</span>
+            <span className="bb-sr-only">Building your basket</span>
             {[0, 1, 2, 3, 4, 5].map((item) => (
               <div className="bb-skeleton" key={item} />
             ))}
           </div>
-        ) : basket ? (
+        ) : lines ? (
           <>
-            {basket.items.length > 0 ? (
+            {lines.length > 0 ? (
               <ul className="bb-receipt-items">
-                {basket.items.map((item, index) => (
-                  <li
-                    className="bb-leader"
-                    key={`${item.product_id ?? item.name}-${index}`}
-                  >
-                    {onSelectItem ? (
+                {lines.map((line) => (
+                  <li className="bb-receipt-line" key={line.productId}>
+                    <div className="bb-leader">
                       <button
                         type="button"
                         className="bb-item-name bb-item-button"
-                        aria-pressed={selectedProductId === item.product_id}
-                        aria-label={`${item.qty} × ${item.name}: see buy-or-wait advice and cheaper swaps`}
-                        onClick={() => onSelectItem(item)}
+                        aria-pressed={selectedProductId === line.productId}
+                        aria-label={`${line.name}: see buy-or-wait advice and cheaper swaps`}
+                        onClick={() => onSelectLine(line)}
                       >
-                        <span className="bb-quantity">{item.qty} × </span>
-                        {item.name}
+                        {line.name}
                       </button>
-                    ) : (
-                      <span className="bb-item-name">
-                        <span className="bb-quantity">{item.qty} × </span>
-                        {item.name}
+                      <span className="bb-leader-fill" aria-hidden="true" />
+                      <span className="bb-price">
+                        ${((Math.round(line.unitPrice * 100) * line.qty) / 100).toFixed(2)}
                       </span>
-                    )}
-                    <span
-                      className="bb-leader-fill"
-                      aria-hidden="true"
-                    />
-                    <span className="bb-price">
-                      ${(item.qty * item.unit_price).toFixed(2)}
-                    </span>
+                    </div>
+
+                    <div className="bb-line-controls">
+                      <div className="bb-stepper" role="group" aria-label={`Quantity of ${line.name}`}>
+                        <button
+                          type="button"
+                          aria-label={line.qty === 1 ? `Remove ${line.name}` : `One less ${line.name}`}
+                          onClick={() => onChangeQty(line.productId, -1)}
+                        >
+                          −
+                        </button>
+                        <span aria-live="polite">{line.qty}</span>
+                        <button
+                          type="button"
+                          aria-label={`One more ${line.name}`}
+                          disabled={line.qty >= MAX_QTY}
+                          onClick={() => onChangeQty(line.productId, 1)}
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      <span className="bb-line-note">
+                        {line.origin === "swapped" && line.swappedFrom
+                          ? `Swapped from ${line.swappedFrom}`
+                          : line.origin === "added"
+                            ? "Added by you"
+                            : `$${line.unitPrice.toFixed(2)} each`}
+                      </span>
+
+                      <button
+                        type="button"
+                        className="bb-text-button bb-line-remove"
+                        aria-label={`Remove ${line.name} from basket`}
+                        onClick={() => onRemove(line.productId)}
+                      >
+                        Remove
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>
             ) : (
               <p className="bb-empty">
-                No products were returned for this budget.
-              </p>
-            )}
-
-            {onSelectItem && basket.items.length > 0 && (
-              <p className="bb-card-footnote">
-                Select an item to see whether to buy now or wait, and cheaper swaps.
+                Your basket is empty. Build it again, or add products from the
+                search.
               </p>
             )}
 
             <dl className="bb-receipt-totals">
               <div className="bb-total-row">
                 <dt>Total</dt>
-                <dd>${basket.total_cost.toFixed(2)}</dd>
+                <dd>${spent.toFixed(2)}</dd>
               </div>
               <div>
                 <dt>Budget</dt>
                 <dd>${budget.toFixed(2)}</dd>
               </div>
-              <div
-                className={remaining < 0 ? "bb-negative" : "bb-green"}
-              >
+              <div className={remaining < 0 ? "bb-negative" : "bb-green"}>
                 <dt>{remaining < 0 ? "Over budget" : "Remaining"}</dt>
                 <dd>${Math.abs(remaining).toFixed(2)}</dd>
               </div>
@@ -112,21 +149,28 @@ export default function BasketReceipt({
             <div className="bb-budget-meter">
               <progress
                 max={budget}
-                value={Math.min(basket.total_cost, budget)}
-                aria-label={`${Math.round((basket.total_cost / budget) * 100)}% of your budget used`}
+                value={Math.min(spent, budget)}
+                aria-label={`${usedPercent}% of your budget used`}
                 className={remaining < 0 ? "bb-meter-over" : undefined}
               />
               <p className="bb-micro">
                 {remaining < 0
                   ? `$${Math.abs(remaining).toFixed(2)} over your budget`
-                  : `${Math.round((basket.total_cost / budget) * 100)}% of your budget used`}
+                  : `${usedPercent}% of your budget used`}
               </p>
             </div>
+
+            {lines.length > 0 && (
+              <p className="bb-card-footnote">
+                Select an item for buy-or-wait advice and cheaper swaps.
+              </p>
+            )}
           </>
         ) : (
           <p className="bb-empty">
             Pick a weekly budget, then build your basket. It's filled with the
-            products you usually buy.
+            products you usually buy. You can also add products yourself from
+            the search.
           </p>
         )}
       </div>

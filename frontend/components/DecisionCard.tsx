@@ -6,6 +6,9 @@ import { getDecision, type DecisionResponse } from "@/lib/api";
 type Props = {
   productId: number | null;
   userId?: number;
+  // How many of this product are already in the basket, and how to add one.
+  inBasketQty?: number;
+  onAdd?: () => void;
 };
 
 type RequestState = {
@@ -35,6 +38,8 @@ function confidenceLabel(confidence: number): string {
 export default function DecisionCard({
   productId,
   userId,
+  inBasketQty = 0,
+  onAdd,
 }: Props) {
   const [state, setState] = useState<RequestState | null>(null);
   const [retry, setRetry] = useState(0);
@@ -181,6 +186,15 @@ export default function DecisionCard({
             </div>
           )}
         </>
+      )}
+
+      {/* Available even if the advice failed to load: adding a product shouldn't depend on it. */}
+      {onAdd && (
+        <div className="bb-card-actions">
+          <button type="button" className="bb-button bb-button-secondary" onClick={onAdd}>
+            {inBasketQty > 0 ? `Add another (${inBasketQty} in basket)` : "Add to basket"}
+          </button>
+        </div>
       )}
     </section>
   );

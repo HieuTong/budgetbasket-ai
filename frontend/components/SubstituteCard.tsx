@@ -3,12 +3,16 @@
 import { useEffect, useState } from "react";
 import {
   getSubstitutes,
+  type Substitute,
   type SubstitutesResponse,
 } from "@/lib/api";
 
 type Props = {
   productId: number | null;
   userId?: number;
+  // True when the product is in the basket, so choosing a swap replaces it.
+  replacing?: boolean;
+  onUse?: (substitute: Substitute) => void;
 };
 
 type RequestState = {
@@ -21,6 +25,8 @@ type RequestState = {
 export default function SubstituteCard({
   productId,
   userId,
+  replacing = false,
+  onUse,
 }: Props) {
   const [state, setState] = useState<RequestState | null>(null);
   const [retry, setRetry] = useState(0);
@@ -149,12 +155,29 @@ export default function SubstituteCard({
                     {item.reason}
                   </p>
                 )}
+
+                {onUse && (
+                  <button
+                    type="button"
+                    className="bb-button bb-button-secondary bb-substitute-action"
+                    aria-label={
+                      replacing
+                        ? `Swap ${data.product_name} for ${item.product_name} in your basket`
+                        : `Add ${item.product_name} to your basket`
+                    }
+                    onClick={() => onUse(item)}
+                  >
+                    {replacing ? "Swap into basket" : "Add to basket"}
+                  </button>
+                )}
               </li>
             ))}
           </ul>
 
           <p className="bb-card-footnote">
-            Savings shown per unit. Your basket is unchanged.
+            {replacing
+              ? "Swapping keeps the same quantity. Savings are per unit."
+              : "Savings shown per unit."}
           </p>
         </>
       )}
