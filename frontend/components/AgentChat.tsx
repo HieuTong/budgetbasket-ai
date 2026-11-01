@@ -1,6 +1,13 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+
+// Shown in turn while the assistant works, so a long wait doesn't look frozen.
+const PROGRESS_MESSAGES = [
+  "Reading your question…",
+  "Checking products and prices…",
+  "Writing the answer…",
+];
 import {
   askAgent,
   TimeoutError,
@@ -17,6 +24,8 @@ type Message = {
   text: string;
   error?: boolean;
   steps?: ChatStep[];
+  // For failed replies: the question to ask again, and which message it was.
+  retry?: { questionId: number; question: string };
 };
 
 // Each suggestion maps to something the assistant can actually do with its tools.
@@ -58,15 +67,15 @@ export default function AgentChat({ userId }: { userId: number }) {
     }
   }, [messages, sending]);
 
-  async function handleSend() {
-    const question = input.trim();
+  async function handleSend(text?: string, earlier: Message[] = messages) {
+    const question = (text ?? input).trim();
     if (!question || pending.current) return;
 
     pending.current = true;
     const requestGeneration = generation.current;
 
     // Earlier turns, oldest first. Failed replies are left out: they aren't real answers.
-    const history: ChatTurn[] = messages
+    const history: ChatTurn[] = earlier
       .filter((message) => !message.error)
       .slice(-HISTORY_TURNS)
       .map((message) => ({
@@ -105,6 +114,7 @@ export default function AgentChat({ userId }: { userId: number }) {
         id: ++messageId.current,
         role: "agent",
         error: true,
+        retry: { questionId: userMessage.id, question },
         text:
           error instanceof TimeoutError
             ? "The assistant is taking longer than usual. Please try again in a moment."
@@ -120,8 +130,28 @@ export default function AgentChat({ userId }: { userId: number }) {
     }
   }
 
+  // One tap asks the question, instead of filling the box and waiting for "Send".
   function selectSuggestion(question: string) {
-    setInput(question);
+    void handleSend(question);
+  }
+
+  // Ask a failed question again, without leaving the failed attempt in the conversation.
+  function retry(failed: Message) {
+    if (!failed.retry || pending.current) return;
+    const { questionId, question } = failed.retry;
+    const earlier = messages.filter(
+      (message) => message.id !== failed.id && message.id !== questionId,
+    );
+    setMessages(earlier);
+    void handleSend(question, earlier);
+  }
+
+  function startOver() {
+    generation.current += 1;
+    pending.current = false;
+    setMessages([]);
+    setInput("");
+    setSending(false);
     inputRef.current?.focus();
   }
 
@@ -129,6 +159,16 @@ export default function AgentChat({ userId }: { userId: number }) {
     <section className="bb-card bb-chat" aria-label="Ask the assistant">
       <div className="bb-section-heading">
         <h2 className="bb-section-title">ask the assistant</h2>
+        {messages.length > 0 && (
+          <button
+            type="button"
+            className="bb-text-button"
+            onClick={startOver}
+            disabled={sending}
+          >
+            Start over
+          </button>
+        )}
       </div>
 
       <p className="bb-chat-description">
@@ -156,13 +196,23 @@ export default function AgentChat({ userId }: { userId: number }) {
             className={`bb-message bb-message-${message.role}`}
           >
             <p className="bb-message-label">
-              {message.role === "user" ? "YOU" : "BASKET ASSISTANT"}
+              {message.role === "user" ? "You" : "Assistant"}
             </p>
             <div
               className={`bb-message-bubble${message.error ? " bb-message-error" : ""}`}
             >
               {message.text}
             </div>
+            {message.error && message.retry && (
+              <button
+                type="button"
+                className="bb-text-button bb-retry"
+                onClick={() => retry(message)}
+                disabled={sending}
+              >
+                Ask again
+              </button>
+            )}
             {message.steps && message.steps.length > 0 && (
               <ul className="bb-steps" aria-label="What the assistant did">
                 {message.steps.map((step, index) => (
@@ -182,13 +232,13 @@ export default function AgentChat({ userId }: { userId: number }) {
 
         {sending && (
           <p className="bb-thinking" role="status">
-            Thinking…
+            <ProgressText />
           </p>
         )}
       </div>
 
       <div className="bb-suggestions">
-        <p className="bb-micro">TRY ASKING</p>
+        <p className="bb-micro">Try asking</p>
         {SUGGESTIONS.map((question) => (
           <button
             key={question}
@@ -242,4 +292,18 @@ export default function AgentChat({ userId }: { userId: number }) {
       </p>
     </section>
   );
+}
+
+function ProgressText() {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(
+      () => setIndex((value) => Math.min(value + 1, PROGRESS_MESSAGES.length - 1)),
+      2500,
+    );
+    return () => window.clearInterval(timer);
+  }, []);
+
+  return <>{PROGRESS_MESSAGES[index]}</>;
 }
