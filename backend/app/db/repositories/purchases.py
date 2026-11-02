@@ -1,11 +1,16 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.db.models import Product, Purchase
 
 
 def get_user_purchases(db: Session, user_id: int) -> list[Purchase]:
+    # selectinload fetches every purchase's product in ONE extra query
+    # ("WHERE id IN (...)"). Without it, reading purchase.product later
+    # triggers a separate query per product: the N+1 problem, which made
+    # building a basket take ~40 s on the live server.
     return (
         db.query(Purchase)
+        .options(selectinload(Purchase.product))
         .filter(Purchase.user_id == user_id)
         .order_by(Purchase.purchased_at.desc())
         .all()
