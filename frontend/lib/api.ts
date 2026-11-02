@@ -5,6 +5,9 @@ const API_BASE =
 const DEFAULT_TIMEOUT_MS = 20_000;
 // The assistant may call several tools and retry the model, so it gets longer.
 const CHAT_TIMEOUT_MS = 60_000;
+// Temporary: building a basket takes about 80 s on the free hosting plan (measured).
+// Lower this again once the optimiser is faster.
+const BASKET_TIMEOUT_MS = 90_000;
 
 export class TimeoutError extends Error {
   constructor(message = "The request took too long.") {
@@ -120,7 +123,7 @@ export async function optimizeBasket(
       user_id: userId,
       budget,
     }),
-  });
+  }, BASKET_TIMEOUT_MS);
 
   if (!res.ok) {
     throw new Error(`Optimize failed: ${res.status}`);
