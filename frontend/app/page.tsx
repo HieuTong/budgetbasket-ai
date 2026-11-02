@@ -9,7 +9,12 @@ import DecisionCard from "@/components/DecisionCard";
 import SubstituteCard from "@/components/SubstituteCard";
 import AgentChat from "@/components/AgentChat";
 import SwapTips from "@/components/SwapTips";
-import { optimizeBasket, type Product, type Substitute } from "@/lib/api";
+import {
+  optimizeBasket,
+  TimeoutError,
+  type Product,
+  type Substitute,
+} from "@/lib/api";
 import {
   addProduct,
   basketTotal,
@@ -82,9 +87,11 @@ export default function Home() {
       setBasketBudget(requestedBudget);
       setEdited(false);
       setLastChange(`Built a basket for $${requestedBudget}.`);
-    } catch {
+    } catch (failure) {
       setError(
-        "Couldn't build your basket. Check your connection and try again.",
+        failure instanceof TimeoutError
+          ? "Building your basket is taking longer than usual. Please try again in a moment."
+          : "Couldn't build your basket. Check your connection and try again.",
       );
     } finally {
       optimizing.current = false;
