@@ -90,3 +90,27 @@ def test_basket_page_and_chat_use_the_same_candidates(client):
     assert page["total_cost"] <= 10 and page["items"]
     candidates, _ = basket_service.build_basket_candidates(None, 1)
     assert {c.product_id for c in candidates} == {p.id for p in PRODUCTS}
+
+
+def test_chat_returns_the_basket_it_built_so_the_page_can_use_it(client, monkeypatch):
+    fake = RecordingClient([_resp([("run_budget_optimizer", {"budget": 10})]), _resp(text="Here you go.")])
+    tools = {**stub_tools(), "run_budget_optimizer": run_budget_optimizer_tool}
+    monkeypatch.setattr(chat_route, "BudgetAgent", lambda: BudgetAgent(client=fake, tool_registry=tools))
+
+    body = client.post("/api/chat/", json={"user_id": 1, "message": "Build me a $10 basket"}).json()
+
+    basket = body["basket"]
+    assert basket is not None and basket["budget"] == 10
+    assert basket["items"], "the reply built a basket but didn't return it"
+    known_ids = {p.id for p in PRODUCTS}
+    assert all(item["product_id"] in known_ids for item in basket["items"])
+    assert basket["total_cost"] <= 10
+
+
+def test_chat_returns_no_basket_when_none_was_built(client, monkeypatch):
+    fake = RecordingClient([_resp(text="Milk looks fairly priced right now.")])
+    monkeypatch.setattr(chat_route, "BudgetAgent", lambda: BudgetAgent(client=fake, tool_registry=stub_tools()))
+
+    body = client.post("/api/chat/", json={"user_id": 1, "message": "Should I buy milk?"}).json()
+
+    assert body["basket"] is None

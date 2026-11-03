@@ -11,6 +11,7 @@ const PROGRESS_MESSAGES = [
 import {
   askAgent,
   TimeoutError,
+  type ChatBasket,
   type ChatStep,
   type ChatTurn,
 } from "@/lib/api";
@@ -24,6 +25,9 @@ type Message = {
   text: string;
   error?: boolean;
   steps?: ChatStep[];
+  // A basket built in this reply, and whether the user has moved it to the basket panel.
+  basket?: ChatBasket;
+  used?: boolean;
   // For failed replies: the question to ask again, and which message it was.
   retry?: { questionId: number; question: string };
 };
@@ -36,7 +40,15 @@ const SUGGESTIONS = [
   "find a cheaper swap for cheese",
 ];
 
-export default function AgentChat({ userId }: { userId: number }) {
+type Props = {
+  userId: number;
+  // Moves a chat basket into the basket panel. Only called when the user taps the button.
+  onUseBasket?: (basket: ChatBasket) => void;
+  // True when the panel already has a basket, so the button says it will be replaced.
+  hasBasket?: boolean;
+};
+
+export default function AgentChat({ userId, onUseBasket, hasBasket = false }: Props) {
   const inputId = useId();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -95,7 +107,7 @@ export default function AgentChat({ userId }: { userId: number }) {
     setSending(true);
 
     try {
-      const { reply, steps } = await askAgent(userId, question, history);
+      const { reply, steps, basket } = await askAgent(userId, question, history);
 
       if (generation.current !== requestGeneration) return;
 
@@ -104,6 +116,7 @@ export default function AgentChat({ userId }: { userId: number }) {
         role: "agent",
         text: reply,
         steps,
+        basket: basket && basket.items.length > 0 ? basket : undefined,
       };
 
       setMessages((previous) => [...previous, replyMessage]);
@@ -144,6 +157,14 @@ export default function AgentChat({ userId }: { userId: number }) {
     );
     setMessages(earlier);
     void handleSend(question, earlier);
+  }
+
+  function chooseBasket(message: Message) {
+    if (!message.basket || !onUseBasket) return;
+    onUseBasket(message.basket);
+    setMessages((previous) =>
+      previous.map((item) => (item.id === message.id ? { ...item, used: true } : item)),
+    );
   }
 
   function startOver() {
@@ -227,6 +248,30 @@ export default function AgentChat({ userId }: { userId: number }) {
                 ))}
               </ul>
             )}
+            {message.basket && onUseBasket && (
+              <div className="bb-chat-basket">
+                <p>
+                  {message.basket.items.length}{" "}
+                  {message.basket.items.length === 1 ? "item" : "items"} · $
+                  {message.basket.total_cost.toFixed(2)}
+                  {message.basket.budget !== null &&
+                    ` of $${message.basket.budget.toFixed(0)}`}
+                </p>
+                {message.used ? (
+                  <p className="bb-chat-basket-done" role="status">
+                    ✓ Now in your basket
+                  </p>
+                ) : (
+                  <button
+                    type="button"
+                    className="bb-button bb-button-small"
+                    onClick={() => chooseBasket(message)}
+                  >
+                    {hasBasket ? "Replace my basket with this" : "Use this basket"}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         ))}
 
@@ -288,7 +333,7 @@ export default function AgentChat({ userId }: { userId: number }) {
       </form>
 
       <p className="bb-card-footnote">
-        Suggestions only—your basket isn’t changed automatically.
+        Your basket only changes when you choose to use one from here.
       </p>
     </section>
   );
