@@ -1404,3 +1404,33 @@ body {
   min-height: 36px;
   margin-top: 10px;
 }
+
+/* A basket built in a chat reply, with the choice to move it into the basket panel. */
+.bb-chat-basket {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--bb-line);
+  border-radius: 6px;
+  background: var(--bb-white);
+}
+
+.bb-chat-basket p {
+  margin: 0;
+  font-size: 13px;
+}
+
+.bb-chat-basket-done {
+  color: var(--bb-green);
+  font-weight: 600;
+}
+
+.bb-button-small {
+  min-height: 36px;
+  padding: 6px 12px;
+  font-size: 13px;
+}

@@ -25,6 +25,7 @@ def run_budget_optimizer_tool(
     return {
         "items": [
             {
+                "product_id": c.product_id,
                 "name": c.name,
                 "qty": q,
                 "unit_price": c.unit_price,

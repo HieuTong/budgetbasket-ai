@@ -12,6 +12,7 @@ import SwapTips from "@/components/SwapTips";
 import {
   optimizeBasket,
   TimeoutError,
+  type ChatBasket,
   type Product,
   type Substitute,
 } from "@/lib/api";
@@ -159,6 +160,25 @@ export default function Home() {
       ?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  // The user chose a basket the assistant built. Same steps as building one here,
+  // so the panel, the budget meter and the saved copy all stay consistent.
+  function applyChatBasket(basket: ChatBasket) {
+    setLines(fromOptimized(basket));
+    if (basket.budget !== null) {
+      setBudget(basket.budget);
+      setBasketBudget(basket.budget);
+    } else {
+      setBasketBudget(budget);
+    }
+    setEdited(false);
+    setError(null);
+    setLastChange(
+      basket.budget !== null
+        ? `Used the assistant's basket for $${basket.budget.toFixed(0)}.`
+        : "Used the assistant's basket.",
+    );
+  }
+
   function clearBasket() {
     setLines(null);
     setBasketBudget(null);
@@ -281,7 +301,11 @@ export default function Home() {
           className="bb-column bb-assistant-column"
           aria-label="Assistant and savings tips"
         >
-          <AgentChat userId={USER_ID} />
+          <AgentChat
+            userId={USER_ID}
+            onUseBasket={applyChatBasket}
+            hasBasket={lines !== null && lines.length > 0}
+          />
           <SwapTips />
         </aside>
       </main>

@@ -21,7 +21,8 @@ export type NewProduct = {
 
 export const MAX_QTY = 20;
 
-export function fromOptimized(result: OptimizeResponse): BasketLine[] {
+// Accepts anything with optimised items: the basket page's result or a chat basket.
+export function fromOptimized(result: Pick<OptimizeResponse, "items">): BasketLine[] {
   return result.items.map((item) => ({
     productId: item.product_id,
     name: item.name,

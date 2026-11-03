@@ -244,9 +244,17 @@ export type ChatStep = {
   ok: boolean;
 };
 
+// A basket the assistant built in its reply. Offered to the user, never applied by itself.
+export type ChatBasket = {
+  budget: number | null;
+  items: BasketItem[];
+  total_cost: number;
+};
+
 export type ChatResponse = {
   reply: string;
   steps: ChatStep[];
+  basket?: ChatBasket | null;
 };
 
 export async function askAgent(
