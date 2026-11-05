@@ -254,7 +254,9 @@ export type ChatBasket = {
 export type ChatResponse = {
   reply: string;
   steps: ChatStep[];
-  basket?: ChatBasket | null;
+  // Required, not optional: then TypeScript rejects any code that builds a chat response
+  // and forgets the basket, which is exactly how the "Use this basket" button went missing.
+  basket: ChatBasket | null;
 };
 
 export async function askAgent(
@@ -285,5 +287,6 @@ export async function askAgent(
   return {
     reply: data.reply,
     steps: data.steps ?? [],
+    basket: data.basket ?? null,
   };
 }
