@@ -21,6 +21,9 @@ class Settings:
     LLM_MODEL: str = os.getenv("LLM_MODEL", "gemini-3.1-flash-lite")
     CORS_ORIGINS: list[str] = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
     VECTOR_STORE_PATH: str = os.getenv("VECTOR_STORE_PATH", "./data/faiss_index")
+    # Signs login tokens. No default on purpose: a known default would let anyone forge tokens.
+    JWT_SECRET: str = os.getenv("JWT_SECRET", "")
+    ACCESS_TOKEN_MINUTES: int = int(os.getenv("ACCESS_TOKEN_MINUTES", "60"))
 
 
 @lru_cache
