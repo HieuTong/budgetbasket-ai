@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 
 class BasketRequest(BaseModel):
-    user_id: int
+    # No user_id: the server takes the user from the login token, never from the request.
     budget: float
 
 
@@ -14,7 +14,6 @@ class ChatTurn(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    user_id: int
     message: str = Field(min_length=1, max_length=2000)
     # Earlier turns of this conversation, oldest first, so follow-up questions make sense.
     history: list[ChatTurn] = Field(default_factory=list, max_length=20)

@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.db.models import Product, Purchase
+from app.api.deps import get_optional_user
+from app.db.models import Product, Purchase, User
 from app.db.session import get_db
 from app.services.similarity import (
     find_cheaper_substitutes,
@@ -15,11 +16,24 @@ router = APIRouter(
 )
 
 
+def _purchases_for(user: User | None, db: Session) -> list[Purchase]:
+    """Purchase history used to personalise results: the signed-in user's, or none."""
+    if user is None:
+        return []
+    return (
+        db.query(Purchase)
+        .filter(
+            Purchase.user_id == user.id,
+        )
+        .all()
+    )
+
+
 @router.get("/{product_id}")
 def get_similar_products(
     product_id: int,
     top_k: int = 5,
-    user_id: int | None = None,
+    user: User | None = Depends(get_optional_user),
     db: Session = Depends(get_db),
 ):
     product = (
@@ -39,21 +53,10 @@ def get_similar_products(
         .all()
     )
 
-    purchases = []
-
-    if user_id is not None:
-        purchases = (
-            db.query(Purchase)
-            .filter(
-                Purchase.user_id == user_id,
-            )
-            .all()
-        )
-
     results = find_similar_products(
         product=product,
         products=products,
-        purchases=purchases,
+        purchases=_purchases_for(user, db),
         top_k=top_k,
     )
 
@@ -83,7 +86,7 @@ def get_similar_products(
 def get_cheaper_substitutes(
     product_id: int,
     top_k: int = 5,
-    user_id: int | None = None,
+    user: User | None = Depends(get_optional_user),
     db: Session = Depends(get_db),
 ):
     product = (
@@ -104,21 +107,10 @@ def get_cheaper_substitutes(
         .all()
     )
 
-    purchases = []
-
-    if user_id is not None:
-        purchases = (
-            db.query(Purchase)
-            .filter(
-                Purchase.user_id == user_id,
-            )
-            .all()
-        )
-
     results = find_cheaper_substitutes(
         product=product,
         products=products,
-        purchases=purchases,
+        purchases=_purchases_for(user, db),
         top_k=top_k,
     )
 

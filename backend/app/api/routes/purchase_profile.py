@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.db.models import Purchase
+from app.api.deps import get_current_user
+from app.db.models import Purchase, User
 from app.db.session import get_db
 from app.services.purchase_profile import build_purchase_profile
 
@@ -12,14 +13,14 @@ router = APIRouter(
 )
 
 
-@router.get("/{user_id}")
-def get_purchase_profile(
-    user_id: int,
+@router.get("/me")
+def get_my_purchase_profile(
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     purchases = (
         db.query(Purchase)
-        .filter(Purchase.user_id == user_id)
+        .filter(Purchase.user_id == user.id)
         .all()
     )
 
@@ -30,7 +31,7 @@ def get_purchase_profile(
         )
 
     profile = build_purchase_profile(
-        user_id=user_id,
+        user_id=user.id,
         purchases=purchases,
     )
 

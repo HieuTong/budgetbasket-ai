@@ -24,6 +24,9 @@ class Settings:
     # Signs login tokens. No default on purpose: a known default would let anyone forge tokens.
     JWT_SECRET: str = os.getenv("JWT_SECRET", "")
     ACCESS_TOKEN_MINUTES: int = int(os.getenv("ACCESS_TOKEN_MINUTES", "60"))
+    # The seeded account that "Try the demo" signs visitors into.
+    DEMO_USER_ID: int = int(os.getenv("DEMO_USER_ID", "1"))
+    DEMO_TOKEN_MINUTES: int = int(os.getenv("DEMO_TOKEN_MINUTES", "30"))
 
 
 @lru_cache

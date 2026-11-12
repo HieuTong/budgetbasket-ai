@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 
 from app.agent.agent import BudgetAgent
 from app.agent.tracing import AgentTrace
+from app.api.deps import get_current_user
+from app.db.models import User
 from app.db.session import get_db
 from app.schemas import ChatRequest
 from app.services.basket import build_basket_candidates
@@ -56,14 +58,15 @@ def basket_from_trace(trace: AgentTrace) -> dict | None:
 @router.post("/")
 def chat(
     req: ChatRequest,
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     # The same candidates the basket page uses, so "build me a basket" in chat
     # optimises the user's real products instead of an empty list.
-    candidates, purchase_count = build_basket_candidates(db, req.user_id)
+    candidates, purchase_count = build_basket_candidates(db, user.id)
 
     context = {
-        "user_id": req.user_id,
+        "user_id": user.id,
         "purchase_history_count": purchase_count,
         "candidates": candidates,
     }
