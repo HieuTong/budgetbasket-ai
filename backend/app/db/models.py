@@ -23,8 +23,8 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=True)
     email = Column(String, nullable=True, unique=True, index=True)
+    password_hash = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-
     purchases = relationship("Purchase", back_populates="user")
     baskets = relationship("Basket", back_populates="user")
 
