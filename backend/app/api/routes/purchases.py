@@ -1,15 +1,20 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from app.api.deps import get_current_user
+from app.db.models import User
 from app.db.repositories.purchases import get_user_purchases
 from app.db.session import get_db
 
 router = APIRouter()
 
 
-@router.get("/{user_id}")
-def get_purchases(user_id: int, db: Session = Depends(get_db)):
-    rows = get_user_purchases(db, user_id)
+@router.get("/me")
+def get_my_purchases(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    rows = get_user_purchases(db, user.id)
     return [
         {
             "product_id": row.product_id,

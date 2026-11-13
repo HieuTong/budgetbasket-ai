@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
 from app.api.routes import (
+    auth,
     basket,
     catalog,
     chat,
@@ -87,6 +88,12 @@ def readiness():
 
     return {"status": "ready"}
 
+
+app.include_router(
+    auth.router,
+    prefix="/api/auth",
+    tags=["auth"],
+)
 
 app.include_router(
     catalog.router,
