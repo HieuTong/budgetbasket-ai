@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.core.config import settings
+from app.core.rate_limit import limit_auth
 from app.core.security import create_access_token, hash_password, verify_password
 from app.db.models import User
 from app.db.session import get_db
@@ -42,7 +43,12 @@ def _normalise(email: str) -> str:
     return email.strip().lower()
 
 
-@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register",
+    response_model=TokenResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(limit_auth)],
+)
 def register(req: RegisterRequest, db: Session = Depends(get_db)):
     user = User(
         email=_normalise(req.email),
@@ -60,7 +66,7 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)):
     return TokenResponse(access_token=create_access_token(user.id))
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login", response_model=TokenResponse, dependencies=[Depends(limit_auth)])
 def login(req: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == _normalise(req.email)).first()
     stored_hash = user.password_hash if user and user.password_hash else _DUMMY_HASH
@@ -76,7 +82,7 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
     return TokenResponse(access_token=create_access_token(user.id))
 
 
-@router.post("/demo", response_model=TokenResponse)
+@router.post("/demo", response_model=TokenResponse, dependencies=[Depends(limit_auth)])
 def demo_login(db: Session = Depends(get_db)):
     """Sign a visitor into the seeded demo account, with a shorter-lived token."""
     user = db.get(User, settings.DEMO_USER_ID)

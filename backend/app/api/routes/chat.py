@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.agent.agent import BudgetAgent
 from app.agent.tracing import AgentTrace
-from app.api.deps import get_current_user
+from app.core.rate_limit import limit_chat
 from app.db.models import User
 from app.db.session import get_db
 from app.schemas import ChatRequest
@@ -58,7 +58,8 @@ def basket_from_trace(trace: AgentTrace) -> dict | None:
 @router.post("/")
 def chat(
     req: ChatRequest,
-    user: User = Depends(get_current_user),
+    # limit_chat authenticates the caller and applies the rate limits.
+    user: User = Depends(limit_chat),
     db: Session = Depends(get_db),
 ):
     # The same candidates the basket page uses, so "build me a basket" in chat
