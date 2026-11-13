@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.db.models import Product, Purchase
+from app.api.deps import get_optional_user
+from app.db.models import Product, Purchase, User
 from app.db.session import get_db
 from app.services.decision import make_product_decision
 
@@ -15,8 +16,8 @@ router = APIRouter(
 @router.get("/{product_id}")
 def get_product_decision(
     product_id: int,
-    user_id: int | None = None,
     forecast_horizon_weeks: int = 4,
+    user: User | None = Depends(get_optional_user),
     db: Session = Depends(get_db),
 ):
     product = (
@@ -31,13 +32,14 @@ def get_product_decision(
             detail="Product not found",
         )
 
+    # Personalise only for the signed-in user. Anonymous visitors get the general answer.
     purchases = []
 
-    if user_id is not None:
+    if user is not None:
         purchases = (
             db.query(Purchase)
             .filter(
-                Purchase.user_id == user_id,
+                Purchase.user_id == user.id,
             )
             .all()
         )

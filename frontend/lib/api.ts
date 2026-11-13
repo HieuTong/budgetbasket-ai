@@ -36,6 +36,84 @@ async function fetchWithTimeout(
   }
 }
 
+// ---------------------------------------------------------------------------
+// Authentication
+//
+// The server decides who you are from a signed token, never from an id the page sends.
+// Visitors are signed into the shared demo account automatically.
+//
+// The token is kept in memory only (not localStorage), so a malicious script on the page
+// cannot read it from storage. A page refresh simply fetches a new one.
+// ---------------------------------------------------------------------------
+
+// The first request may have to wait for the free hosting plan to wake the server.
+const AUTH_TIMEOUT_MS = 60_000;
+
+let accessToken: string | null = null;
+// Shared by every request that needs a token at the same moment, so a page that fires
+// five requests on load performs one login, not five.
+let tokenRequest: Promise<string> | null = null;
+
+async function requestDemoToken(): Promise<string> {
+  const res = await fetchWithTimeout(
+    `${API_BASE}/api/auth/demo`,
+    { method: "POST" },
+    AUTH_TIMEOUT_MS,
+  );
+
+  if (!res.ok) {
+    throw new Error(`Sign-in failed: ${res.status}`);
+  }
+
+  const data = await res.json();
+  return data.access_token as string;
+}
+
+async function getToken(): Promise<string> {
+  if (accessToken) {
+    return accessToken;
+  }
+
+  if (!tokenRequest) {
+    tokenRequest = requestDemoToken()
+      .then((token) => {
+        accessToken = token;
+        return token;
+      })
+      .finally(() => {
+        tokenRequest = null;
+      });
+  }
+
+  return tokenRequest;
+}
+
+// fetchWithTimeout plus the login token. If the server rejects the token (it expired),
+// sign in again and retry once. Only once: a second 401 is a real error, not an expiry.
+async function authFetch(
+  url: string,
+  init: RequestInit = {},
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+): Promise<Response> {
+  const send = async () => {
+    const token = await getToken();
+    return fetchWithTimeout(
+      url,
+      { ...init, headers: { ...init.headers, Authorization: `Bearer ${token}` } },
+      timeoutMs,
+    );
+  };
+
+  const res = await send();
+
+  if (res.status !== 401) {
+    return res;
+  }
+
+  accessToken = null;
+  return send();
+}
+
 export type BasketItem = {
   product_id: number;
   name: string;
@@ -112,15 +190,17 @@ export async function checkHealth(): Promise<boolean> {
   }
 }
 
+// `userId` is no longer sent anywhere in this file: the server reads the user from the
+// token. The parameter stays for now so the components that call these functions do not
+// change in this step; they still use it as the key for the basket saved in the browser.
 export async function optimizeBasket(
   userId: number,
   budget: number,
 ): Promise<OptimizeResponse> {
-  const res = await fetchWithTimeout(`${API_BASE}/api/basket/optimize`, {
+  const res = await authFetch(`${API_BASE}/api/basket/optimize`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      user_id: userId,
       budget,
     }),
   }, BASKET_TIMEOUT_MS);
@@ -190,17 +270,8 @@ export async function getDecision(
   productId: number,
   userId?: number,
 ): Promise<DecisionResponse> {
-  const params = new URLSearchParams();
-
-  if (userId !== undefined) {
-    params.set("user_id", String(userId));
-  }
-
-  const query = params.toString();
-
-  const res = await fetchWithTimeout(
-    `${API_BASE}/api/decision/${productId}${query ? `?${query}` : ""}`,
-  );
+  // Signed in, so the advice is personalised to the token's user.
+  const res = await authFetch(`${API_BASE}/api/decision/${productId}`);
 
   if (!res.ok) {
     throw new Error(`Decision failed: ${res.status}`);
@@ -218,11 +289,7 @@ export async function getSubstitutes(
     top_k: String(topK),
   });
 
-  if (userId !== undefined) {
-    params.set("user_id", String(userId));
-  }
-
-  const res = await fetchWithTimeout(
+  const res = await authFetch(
     `${API_BASE}/api/similarity/${productId}/substitutes?${params}`,
   );
 
@@ -264,13 +331,12 @@ export async function askAgent(
   message: string,
   history: ChatTurn[] = [],
 ): Promise<ChatResponse> {
-  const res = await fetchWithTimeout(
+  const res = await authFetch(
     `${API_BASE}/api/chat/`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        user_id: userId,
         message,
         history,
       }),
