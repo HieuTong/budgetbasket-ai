@@ -5,6 +5,7 @@ import time
 from google import genai
 from google.genai import types
 
+from app.agent.openai_compat import OpenAICompatClient
 from app.agent.tools import TOOL_REGISTRY
 from app.agent.tracing import AgentTrace, LLMCall, ToolCall
 from app.core.config import settings
@@ -150,15 +151,31 @@ TOOLS = [
 ]
 
 
+def build_llm_client():
+    """The model client chosen by configuration, so changing provider needs no code change."""
+    # A hard timeout per model call stops one slow request from hanging for a minute or more.
+    timeout_s = float(os.getenv("AGENT_LLM_TIMEOUT_S", "30"))
+
+    if settings.LLM_PROVIDER == "openai":
+        return OpenAICompatClient(
+            base_url=settings.LLM_BASE_URL,
+            api_key=settings.LLM_API_KEY,
+            timeout_s=timeout_s,
+        )
+
+    if settings.LLM_PROVIDER == "gemini":
+        return genai.Client(
+            api_key=settings.GEMINI_API_KEY,
+            http_options=types.HttpOptions(timeout=int(timeout_s * 1000)),
+        )
+
+    raise RuntimeError("Unsupported LLM_PROVIDER. Use 'gemini' or 'openai'.")
+
+
 class BudgetAgent:
     def __init__(self, client=None, tool_registry: dict | None = None):
         # Injecting the client and tools lets tests and evaluations run without network calls.
-        # A hard timeout per model call stops one slow request from hanging for a minute or more.
-        timeout_ms = int(float(os.getenv("AGENT_LLM_TIMEOUT_S", "30")) * 1000)
-        self.client = client or genai.Client(
-            api_key=settings.GEMINI_API_KEY,
-            http_options=types.HttpOptions(timeout=timeout_ms),
-        )
+        self.client = client or build_llm_client()
         self.tool_registry = tool_registry or TOOL_REGISTRY
 
     def run(
