@@ -24,10 +24,14 @@ if __name__ == "__main__":
     ap.add_argument("--retry-errors-after", type=float, default=None,
                     help="re-run cases that hit provider errors once, after this many seconds")
     a = ap.parse_args()
-    if not os.getenv("GEMINI_API_KEY"):
+    from app.core.config import settings
+    if settings.LLM_PROVIDER == "openai":
+        if not settings.LLM_BASE_URL:
+            sys.exit("LLM_PROVIDER=openai needs LLM_BASE_URL, e.g. http://localhost:8000/v1")
+    elif not settings.GEMINI_API_KEY:
         sys.exit("GEMINI_API_KEY is not set; the live evaluation needs the real model.")
 
-    print(f"Model: {os.getenv('LLM_MODEL', '(config default)')}")
+    print(f"Provider: {settings.LLM_PROVIDER}  Model: {settings.LLM_MODEL}")
     results = run_eval(BudgetAgent(tool_registry=stub_tools()), pause_s=a.pause,
                        retry_errors_after_s=a.retry_errors_after)
     summary = summarise(results)
