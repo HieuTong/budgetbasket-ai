@@ -44,10 +44,16 @@ def run_command(args) -> None:
         sys.exit("GEMINI_API_KEY is not set; the Gemini benchmark needs the real model.")
 
     label = args.label or f"{settings.LLM_PROVIDER}:{settings.LLM_MODEL}"
+    cases = None  # None means the official 12 cases
+    if args.cases == "heldout":
+        from app.agent.finetune_data import heldout_cases
+        cases = heldout_cases()
+        print(f"Using the held-out set: {len(cases)} cases")
     print(f"Benchmarking {label} (provider {settings.LLM_PROVIDER}, model {settings.LLM_MODEL})")
     report = benchmark(
         BudgetAgent(tool_registry=stub_tools()),
         label=label,
+        cases=cases,
         provider=settings.LLM_PROVIDER,
         model=settings.LLM_MODEL,
         repeats=args.repeats,
@@ -80,6 +86,8 @@ def main() -> None:
     run = commands.add_parser("run", help="measure the backend selected by the environment")
     run.add_argument("--json-out", required=True)
     run.add_argument("--label", help="name shown in the comparison table")
+    run.add_argument("--cases", choices=["default", "heldout"], default="default",
+                     help="default = the official 12 eval cases; heldout = the larger fine-tuning test set")
     run.add_argument("--repeats", type=int, default=3, help="sequential passes over the eval cases")
     run.add_argument("--concurrency", type=_levels, default=(1, 4, 16), help="comma-separated, e.g. 1,4,16")
     run.add_argument("--requests", type=int, default=24, help="requests per concurrency level")
