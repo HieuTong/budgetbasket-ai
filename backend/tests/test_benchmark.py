@@ -1,5 +1,7 @@
 """The benchmark harness, tested with a fake agent: no network, no GPU, no real timing."""
+import itertools
 import threading
+import types
 
 import pytest
 
@@ -156,7 +158,12 @@ def test_compare_lines_two_runs_up_side_by_side():
     assert "pass rate (answered)" in table
 
 
-def test_compare_shows_the_gpu_cost_when_it_was_measured():
+def test_compare_shows_the_gpu_cost_when_it_was_measured(monkeypatch):
+    # The fake agent answers instantly, so real wall-clock time is a few milliseconds and the
+    # cost per million tokens rounds to 0 on a fast machine. Fake the clock so each timed
+    # workload takes exactly one second, whatever the machine.
+    ticks = itertools.count()
+    monkeypatch.setattr("app.agent.benchmark.time", types.SimpleNamespace(perf_counter=lambda: float(next(ticks))))
     with_gpu = benchmark(FakeAgent(), "qwen", "openai", "m", repeats=1, concurrency_levels=(2,),
                          requests_per_level=8, gpu_usd_per_hour=0.5, progress=lambda *_: None)
     without = benchmark(FakeAgent(), "gemini", "gemini", "m", repeats=1, concurrency_levels=(2,),
