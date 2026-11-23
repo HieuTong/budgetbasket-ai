@@ -7,18 +7,18 @@ A cost-of-living optimizer for Australian households: given your usual purchases
 
 ## Results at a glance
 
-| Question | Result | How to reproduce |
-|---|---|---|
-| Does the BUY/WAIT advice save money? | The original engine saved **0%**. A dedicated specials model saves **11.4%** versus always buying (95% interval 8.9% to 14.1%), similar to a simple "buy near the recent low" rule (10.3%), while asking households to wait about half as often (44% vs 76% of purchases) and backfiring less than half as often (15% vs 34% of waits). | `python scripts/run_specials_experiment.py --synthetic` |
-| Does the agent use its tools correctly? | **10 of 10** evaluation cases passed with **0** budget violations, including a prompt-injection attempt it safely refused. | `python scripts/run_agent_eval.py` |
-| Is it fast enough? | Median **4.1 s**, p95 **10.4 s** per request (p95 was 76.8 s before adding timeouts and retries), about 1,640 tokens per request on `gemini-3.1-flash-lite`. | Traces from the evaluation run |
+| Question                                | Result                                                                                                                                                                                                                                                                                                                                  | How to reproduce                                        |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| Does the BUY/WAIT advice save money?    | The original engine saved **0%**. A dedicated specials model saves **11.4%** versus always buying (95% interval 8.9% to 14.1%), similar to a simple "buy near the recent low" rule (10.3%), while asking households to wait about half as often (44% vs 76% of purchases) and backfiring less than half as often (15% vs 34% of waits). | `python scripts/run_specials_experiment.py --synthetic` |
+| Does the agent use its tools correctly? | **10 of 10** evaluation cases passed with **0** budget violations, including a prompt-injection attempt it safely refused.                                                                                                                                                                                                              | `python scripts/run_agent_eval.py`                      |
+| Is it fast enough?                      | Median **4.1 s**, p95 **10.4 s** per request (p95 was 76.8 s before adding timeouts and retries), about 1,640 tokens per request on `gemini-3.1-flash-lite`.                                                                                                                                                                            | Traces from the evaluation run                          |
 
 > The savings results use **synthetic** price data generated with regular specials cycles, which flatters a cycle-aware model. They show the method works end to end; real Australian price data is the next step (see Known limitations).
 
 ## What the evaluation uncovered, and what changed
 
 1. **The decision engine never saved money.** A backtest that replays price history without look-ahead showed it behaved exactly like "always buy". There were two stacked causes:
-   - The WAIT rule was **inverted**: it waited when prices were expected to *rise*. Fixed, with a regression test.
+   - The WAIT rule was **inverted**: it waited when prices were expected to _rise_. Fixed, with a regression test.
    - The linear forecast's confidence (R²) was almost always near zero on specials-driven prices (median 0.01), so the engine rarely acted at all. To address this, a separate model predicts whether an item will be at least 10% cheaper within the household's waiting window. It has been built and evaluated in the backtest; connecting it to the live app is the next step.
 2. **The new model is not claimed to save more than the simple rule.** The difference is +1.2 points, but its 95% interval (−0.2 to +2.5) includes zero. Its real advantage is behaviour: fewer waits and fewer waits that backfire.
 3. **The agent evaluation tested the wrong thing at first.** A "failed" injection case was the agent safely refusing to invent prices, so the check now tests the property that matters (no invented prices) rather than one specific behaviour. Random 18 to 77 second API stalls led to per-call timeouts with retry. Disabling the model's thinking did not reduce latency in a measured comparison, so the default was kept.
@@ -261,6 +261,33 @@ See `DEPLOYMENT.md` for the backend deployment walkthrough.
 The OpenSearch Azure VM is a separate search-infrastructure deployment. Do not assume that the public demo uses that instance unless the backend's configured endpoint confirms the connection.
 
 For security, do not expose OpenSearch directly to the public internet. Restrict access to trusted services, protect credentials, and use appropriate network rules.
+
+## Model serving benchmark
+
+Same tool-calling agent, measured with `scripts/benchmark_llm.py` on 2026-11-23.
+Model: Qwen2.5-1.5B-Instruct served by vLLM 0.34.0 on one T4 GPU (Google Colab). FlashInfer kernels were disabled.
+Each request is about 1,800 prompt tokens and about 110 output tokens.
+
+| Concurrency | Output tokens/s | p50 latency (s) | p95 latency (s) | Errors |
+| ----------- | --------------- | --------------- | --------------- | ------ |
+| 1           | 50.8            | 1.667           | 5.427           | 0      |
+| 4           | 152.0           | 1.917           | 6.504           | 0      |
+| 16          | 320.1           | 3.040           | 8.197           | 0      |
+
+Going from 1 to 16 concurrent requests gives 6.3x the throughput for about 1.8x the median latency.
+
+Quality of the base model on the 50 held-out cases (never used for training): 22 of 50 pass (0.44).
+It passes substitutes 6/6, injection 6/6 and decision 5/6, but fails named-product decisions (0/6),
+price trends (0/6), tips (0/4) and most budget (1/6) and multi-tool (1/6) cases.
+Decoding is deterministic, so the three repeats add no information: read these as 22 of 50, not 66 of 150.
+The held-out cases come from the same generator as the training data, so they test new phrasings, not new tools.
+
+Not measured:
+
+- Gemini API baseline. The free tier allows 15 requests per minute, and the agent makes about two model calls per request, so 29 of 36 requests were rejected (HTTP 429).
+- SGLang. <write what you saw: for example, "did not start on a T4: its FlashInfer kernel build failed because `ninja` was missing">.
+
+Raw results: `backend/reports/llm_qwen_vllm.json`, `backend/reports/llm_qwen_base_heldout.json`.
 
 ## Testing and Evaluation
 

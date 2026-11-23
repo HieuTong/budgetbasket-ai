@@ -1,0 +1,286 @@
+{
+  "meta": {
+    "label": "qwen-vllm",
+    "provider": "openai",
+    "model": "Qwen/Qwen2.5-1.5B-Instruct",
+    "repeats": 3,
+    "concurrency_levels": [
+      1,
+      4,
+      16
+    ],
+    "requests_per_level": 24,
+    "gpu_usd_per_hour": null,
+    "started_at": "2026-11-23T06:04:36+00:00"
+  },
+  "quality": {
+    "requests": 36,
+    "answered": 36,
+    "errors": 0,
+    "pass_rate": 0.5,
+    "budget_violations": 0,
+    "latency_p50_s": 1.718,
+    "latency_p95_s": 5.249,
+    "latency_max_s": 6.291,
+    "wall_s": 79.756,
+    "requests_per_s": 0.451,
+    "output_tokens_per_s": 50.1,
+    "avg_llm_calls": 1.92,
+    "avg_prompt_tokens": 1795.2,
+    "avg_output_tokens": 111.1,
+    "avg_cost_usd": null,
+    "per_case": {
+      "budget_50": {
+        "passed": 0,
+        "total": 3
+      },
+      "budget_80": {
+        "passed": 3,
+        "total": 3
+      },
+      "budget_tight": {
+        "passed": 3,
+        "total": 3
+      },
+      "decision": {
+        "passed": 0,
+        "total": 3
+      },
+      "decision_phrasing": {
+        "passed": 0,
+        "total": 3
+      },
+      "substitutes": {
+        "passed": 3,
+        "total": 3
+      },
+      "tips": {
+        "passed": 3,
+        "total": 3
+      },
+      "multi_tool": {
+        "passed": 0,
+        "total": 3
+      },
+      "named_product": {
+        "passed": 0,
+        "total": 3
+      },
+      "price_trend": {
+        "passed": 0,
+        "total": 3
+      },
+      "small_talk": {
+        "passed": 3,
+        "total": 3
+      },
+      "injection": {
+        "passed": 3,
+        "total": 3
+      }
+    }
+  },
+  "load": {
+    "1": {
+      "requests": 24,
+      "answered": 24,
+      "errors": 0,
+      "pass_rate": 0.5,
+      "budget_violations": 0,
+      "latency_p50_s": 1.667,
+      "latency_p95_s": 5.427,
+      "latency_max_s": 5.707,
+      "wall_s": 52.433,
+      "requests_per_s": 0.458,
+      "output_tokens_per_s": 50.8,
+      "avg_llm_calls": 1.92,
+      "avg_prompt_tokens": 1795.2,
+      "avg_output_tokens": 111.1,
+      "avg_cost_usd": null,
+      "per_case": {
+        "budget_50": {
+          "passed": 0,
+          "total": 2
+        },
+        "budget_80": {
+          "passed": 2,
+          "total": 2
+        },
+        "budget_tight": {
+          "passed": 2,
+          "total": 2
+        },
+        "decision": {
+          "passed": 0,
+          "total": 2
+        },
+        "decision_phrasing": {
+          "passed": 0,
+          "total": 2
+        },
+        "substitutes": {
+          "passed": 2,
+          "total": 2
+        },
+        "tips": {
+          "passed": 2,
+          "total": 2
+        },
+        "multi_tool": {
+          "passed": 0,
+          "total": 2
+        },
+        "named_product": {
+          "passed": 0,
+          "total": 2
+        },
+        "price_trend": {
+          "passed": 0,
+          "total": 2
+        },
+        "small_talk": {
+          "passed": 2,
+          "total": 2
+        },
+        "injection": {
+          "passed": 2,
+          "total": 2
+        }
+      }
+    },
+    "4": {
+      "requests": 24,
+      "answered": 24,
+      "errors": 0,
+      "pass_rate": 0.5,
+      "budget_violations": 0,
+      "latency_p50_s": 1.917,
+      "latency_p95_s": 6.504,
+      "latency_max_s": 6.57,
+      "wall_s": 17.538,
+      "requests_per_s": 1.368,
+      "output_tokens_per_s": 152.0,
+      "avg_llm_calls": 1.92,
+      "avg_prompt_tokens": 1795.2,
+      "avg_output_tokens": 111.1,
+      "avg_cost_usd": null,
+      "per_case": {
+        "budget_50": {
+          "passed": 0,
+          "total": 2
+        },
+        "budget_80": {
+          "passed": 2,
+          "total": 2
+        },
+        "budget_tight": {
+          "passed": 2,
+          "total": 2
+        },
+        "decision": {
+          "passed": 0,
+          "total": 2
+        },
+        "decision_phrasing": {
+          "passed": 0,
+          "total": 2
+        },
+        "substitutes": {
+          "passed": 2,
+          "total": 2
+        },
+        "tips": {
+          "passed": 2,
+          "total": 2
+        },
+        "multi_tool": {
+          "passed": 0,
+          "total": 2
+        },
+        "named_product": {
+          "passed": 0,
+          "total": 2
+        },
+        "price_trend": {
+          "passed": 0,
+          "total": 2
+        },
+        "small_talk": {
+          "passed": 2,
+          "total": 2
+        },
+        "injection": {
+          "passed": 2,
+          "total": 2
+        }
+      }
+    },
+    "16": {
+      "requests": 24,
+      "answered": 24,
+      "errors": 0,
+      "pass_rate": 0.5,
+      "budget_violations": 0,
+      "latency_p50_s": 3.04,
+      "latency_p95_s": 8.197,
+      "latency_max_s": 8.22,
+      "wall_s": 8.329,
+      "requests_per_s": 2.882,
+      "output_tokens_per_s": 320.1,
+      "avg_llm_calls": 1.92,
+      "avg_prompt_tokens": 1795.2,
+      "avg_output_tokens": 111.1,
+      "avg_cost_usd": null,
+      "per_case": {
+        "budget_50": {
+          "passed": 0,
+          "total": 2
+        },
+        "budget_80": {
+          "passed": 2,
+          "total": 2
+        },
+        "budget_tight": {
+          "passed": 2,
+          "total": 2
+        },
+        "decision": {
+          "passed": 0,
+          "total": 2
+        },
+        "decision_phrasing": {
+          "passed": 0,
+          "total": 2
+        },
+        "substitutes": {
+          "passed": 2,
+          "total": 2
+        },
+        "tips": {
+          "passed": 2,
+          "total": 2
+        },
+        "multi_tool": {
+          "passed": 0,
+          "total": 2
+        },
+        "named_product": {
+          "passed": 0,
+          "total": 2
+        },
+        "price_trend": {
+          "passed": 0,
+          "total": 2
+        },
+        "small_talk": {
+          "passed": 2,
+          "total": 2
+        },
+        "injection": {
+          "passed": 2,
+          "total": 2
+        }
+      }
+    }
+  }
+}
