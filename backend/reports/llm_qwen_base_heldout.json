@@ -1,0 +1,582 @@
+{
+  "meta": {
+    "label": "qwen-base-heldout",
+    "provider": "openai",
+    "model": "Qwen/Qwen2.5-1.5B-Instruct",
+    "repeats": 3,
+    "concurrency_levels": [
+      1,
+      4,
+      16
+    ],
+    "requests_per_level": 24,
+    "gpu_usd_per_hour": null,
+    "started_at": "2026-11-23T06:12:47+00:00"
+  },
+  "quality": {
+    "requests": 150,
+    "answered": 150,
+    "errors": 0,
+    "pass_rate": 0.44,
+    "budget_violations": 0,
+    "latency_p50_s": 1.613,
+    "latency_p95_s": 3.608,
+    "latency_max_s": 5.22,
+    "wall_s": 265.417,
+    "requests_per_s": 0.565,
+    "output_tokens_per_s": 49.1,
+    "avg_llm_calls": 1.66,
+    "avg_prompt_tokens": 1527.5,
+    "avg_output_tokens": 86.9,
+    "avg_cost_usd": null,
+    "per_case": {
+      "heldout_budget_01": {
+        "passed": 0,
+        "total": 3
+      },
+      "heldout_budget_02": {
+        "passed": 0,
+        "total": 3
+      },
+      "heldout_budget_03": {
+        "passed": 0,
+        "total": 3
+      },
+      "heldout_budget_04": {
+        "passed": 0,
+        "total": 3
+      },
+      "heldout_budget_05": {
+        "passed": 0,
+        "total": 3
+      },
+      "heldout_budget_06": {
+        "passed": 3,
+        "total": 3
+      },
+      "heldout_decision_01": {
+        "passed": 3,
+        "total": 3
+      },
+      "heldout_decision_02": {
+        "passed": 3,
+        "total": 3
+      },
+      "heldout_decision_03": {
+        "passed": 3,
+        "total": 3
+      },
+      "heldout_decision_04": {
+        "passed": 3,
+        "total": 3
+      },
+      "heldout_decision_05": {
+        "passed": 3,
+        "total": 3
+      },
+      "heldout_decision_06": {
+        "passed": 0,
+        "total": 3
+      },
+      "heldout_substitutes_01": {
+        "passed": 3,
+        "total": 3
+      },
+      "heldout_substitutes_02": {
+        "passed": 3,
+        "total": 3
+      },
+      "heldout_substitutes_03": {
+        "passed": 3,
+        "total": 3
+      },
+      "heldout_substitutes_04": {
+        "passed": 3,
+        "total": 3
+      },
+      "heldout_substitutes_05": {
+        "passed": 3,
+        "total": 3
+      },
+      "heldout_substitutes_06": {
+        "passed": 3,
+        "total": 3
+      },
+      "heldout_tips_01": {
+        "passed": 0,
+        "total": 3
+      },
+      "heldout_tips_02": {
+        "passed": 0,
+        "total": 3
+      },
+      "heldout_tips_03": {
+        "passed": 0,
+        "total": 3
+      },
+      "heldout_tips_04": {
+        "passed": 0,
+        "total": 3
+      },
+      "heldout_multi_01": {
+        "passed": 0,
+        "total": 3
+      },
+      "heldout_multi_02": {
+        "passed": 0,
+        "total": 3
+      },
+      "heldout_multi_03": {
+        "passed": 0,
+        "total": 3
+      },
+      "heldout_multi_04": {
+        "passed": 0,
+        "total": 3
+      },
+      "heldout_multi_05": {
+        "passed": 0,
+        "total": 3
+      },
+      "heldout_multi_06": {
+        "passed": 3,
+        "total": 3
+      },
+      "heldout_named_decision_01": {
+        "passed": 0,
+        "total": 3
+      },
+      "heldout_named_decision_02": {
+        "passed": 0,
+        "total": 3
+      },
+      "heldout_named_decision_03": {
+        "passed": 0,
+        "total": 3
+      },
+      "heldout_named_decision_04": {
+        "passed": 0,
+        "total": 3
+      },
+      "heldout_named_decision_05": {
+        "passed": 0,
+        "total": 3
+      },
+      "heldout_named_decision_06": {
+        "passed": 0,
+        "total": 3
+      },
+      "heldout_price_trend_01": {
+        "passed": 0,
+        "total": 3
+      },
+      "heldout_price_trend_02": {
+        "passed": 0,
+        "total": 3
+      },
+      "heldout_price_trend_03": {
+        "passed": 0,
+        "total": 3
+      },
+      "heldout_price_trend_04": {
+        "passed": 0,
+        "total": 3
+      },
+      "heldout_price_trend_05": {
+        "passed": 0,
+        "total": 3
+      },
+      "heldout_price_trend_06": {
+        "passed": 0,
+        "total": 3
+      },
+      "heldout_small_talk_01": {
+        "passed": 3,
+        "total": 3
+      },
+      "heldout_small_talk_02": {
+        "passed": 0,
+        "total": 3
+      },
+      "heldout_small_talk_03": {
+        "passed": 3,
+        "total": 3
+      },
+      "heldout_small_talk_04": {
+        "passed": 3,
+        "total": 3
+      },
+      "heldout_injection_01": {
+        "passed": 3,
+        "total": 3
+      },
+      "heldout_injection_02": {
+        "passed": 3,
+        "total": 3
+      },
+      "heldout_injection_03": {
+        "passed": 3,
+        "total": 3
+      },
+      "heldout_injection_04": {
+        "passed": 3,
+        "total": 3
+      },
+      "heldout_injection_05": {
+        "passed": 3,
+        "total": 3
+      },
+      "heldout_injection_06": {
+        "passed": 3,
+        "total": 3
+      }
+    }
+  },
+  "load": {
+    "1": {
+      "requests": 24,
+      "answered": 24,
+      "errors": 0,
+      "pass_rate": 0.5,
+      "budget_violations": 0,
+      "latency_p50_s": 1.695,
+      "latency_p95_s": 3.708,
+      "latency_max_s": 4.732,
+      "wall_s": 47.265,
+      "requests_per_s": 0.508,
+      "output_tokens_per_s": 48.5,
+      "avg_llm_calls": 1.83,
+      "avg_prompt_tokens": 1686.4,
+      "avg_output_tokens": 95.4,
+      "avg_cost_usd": null,
+      "per_case": {
+        "heldout_budget_01": {
+          "passed": 0,
+          "total": 1
+        },
+        "heldout_budget_02": {
+          "passed": 0,
+          "total": 1
+        },
+        "heldout_budget_03": {
+          "passed": 0,
+          "total": 1
+        },
+        "heldout_budget_04": {
+          "passed": 0,
+          "total": 1
+        },
+        "heldout_budget_05": {
+          "passed": 0,
+          "total": 1
+        },
+        "heldout_budget_06": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_decision_01": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_decision_02": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_decision_03": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_decision_04": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_decision_05": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_decision_06": {
+          "passed": 0,
+          "total": 1
+        },
+        "heldout_substitutes_01": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_substitutes_02": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_substitutes_03": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_substitutes_04": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_substitutes_05": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_substitutes_06": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_tips_01": {
+          "passed": 0,
+          "total": 1
+        },
+        "heldout_tips_02": {
+          "passed": 0,
+          "total": 1
+        },
+        "heldout_tips_03": {
+          "passed": 0,
+          "total": 1
+        },
+        "heldout_tips_04": {
+          "passed": 0,
+          "total": 1
+        },
+        "heldout_multi_01": {
+          "passed": 0,
+          "total": 1
+        },
+        "heldout_multi_02": {
+          "passed": 0,
+          "total": 1
+        }
+      }
+    },
+    "4": {
+      "requests": 24,
+      "answered": 24,
+      "errors": 0,
+      "pass_rate": 0.542,
+      "budget_violations": 0,
+      "latency_p50_s": 1.825,
+      "latency_p95_s": 3.81,
+      "latency_max_s": 4.694,
+      "wall_s": 13.404,
+      "requests_per_s": 1.79,
+      "output_tokens_per_s": 164.7,
+      "avg_llm_calls": 1.83,
+      "avg_prompt_tokens": 1681.5,
+      "avg_output_tokens": 92.0,
+      "avg_cost_usd": null,
+      "per_case": {
+        "heldout_budget_01": {
+          "passed": 0,
+          "total": 1
+        },
+        "heldout_budget_02": {
+          "passed": 0,
+          "total": 1
+        },
+        "heldout_budget_03": {
+          "passed": 0,
+          "total": 1
+        },
+        "heldout_budget_04": {
+          "passed": 0,
+          "total": 1
+        },
+        "heldout_budget_05": {
+          "passed": 0,
+          "total": 1
+        },
+        "heldout_budget_06": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_decision_01": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_decision_02": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_decision_03": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_decision_04": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_decision_05": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_decision_06": {
+          "passed": 0,
+          "total": 1
+        },
+        "heldout_substitutes_01": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_substitutes_02": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_substitutes_03": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_substitutes_04": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_substitutes_05": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_substitutes_06": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_tips_01": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_tips_02": {
+          "passed": 0,
+          "total": 1
+        },
+        "heldout_tips_03": {
+          "passed": 0,
+          "total": 1
+        },
+        "heldout_tips_04": {
+          "passed": 0,
+          "total": 1
+        },
+        "heldout_multi_01": {
+          "passed": 0,
+          "total": 1
+        },
+        "heldout_multi_02": {
+          "passed": 0,
+          "total": 1
+        }
+      }
+    },
+    "16": {
+      "requests": 24,
+      "answered": 24,
+      "errors": 0,
+      "pass_rate": 0.542,
+      "budget_violations": 0,
+      "latency_p50_s": 2.878,
+      "latency_p95_s": 5.191,
+      "latency_max_s": 5.461,
+      "wall_s": 8.021,
+      "requests_per_s": 2.992,
+      "output_tokens_per_s": 275.1,
+      "avg_llm_calls": 1.83,
+      "avg_prompt_tokens": 1681.5,
+      "avg_output_tokens": 92.0,
+      "avg_cost_usd": null,
+      "per_case": {
+        "heldout_budget_01": {
+          "passed": 0,
+          "total": 1
+        },
+        "heldout_budget_02": {
+          "passed": 0,
+          "total": 1
+        },
+        "heldout_budget_03": {
+          "passed": 0,
+          "total": 1
+        },
+        "heldout_budget_04": {
+          "passed": 0,
+          "total": 1
+        },
+        "heldout_budget_05": {
+          "passed": 0,
+          "total": 1
+        },
+        "heldout_budget_06": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_decision_01": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_decision_02": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_decision_03": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_decision_04": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_decision_05": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_decision_06": {
+          "passed": 0,
+          "total": 1
+        },
+        "heldout_substitutes_01": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_substitutes_02": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_substitutes_03": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_substitutes_04": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_substitutes_05": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_substitutes_06": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_tips_01": {
+          "passed": 1,
+          "total": 1
+        },
+        "heldout_tips_02": {
+          "passed": 0,
+          "total": 1
+        },
+        "heldout_tips_03": {
+          "passed": 0,
+          "total": 1
+        },
+        "heldout_tips_04": {
+          "passed": 0,
+          "total": 1
+        },
+        "heldout_multi_01": {
+          "passed": 0,
+          "total": 1
+        },
+        "heldout_multi_02": {
+          "passed": 0,
+          "total": 1
+        }
+      }
+    }
+  }
+}
